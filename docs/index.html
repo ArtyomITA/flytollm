@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlyToLLM · il connettoma parlante</title>
+<meta name="description" content="Il sistema nervoso completo di un moscerino maschio (male-cns:v1.0, 166.700 neuroni) usato intero come nucleo ricorrente spiking di un language model.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#070a0e; --surface:#0f1720; --surface-2:#141f2b; --line:#1d2b39; --line-soft:#16222e;
+    --exc:#ffbe5c; --inh:#4fd0ff; --mod:#c08cff; --spike:#fff6e3;
+    --ink:#dce6f0; --ink-dim:#7e91a6; --ink-faint:#4d5f71;
+    --f-display:"Chakra Petch","Segoe UI",system-ui,sans-serif;
+    --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,"Cascadia Mono",monospace;
+    --step--1:.735rem; --step-0:.9rem; --step-1:1.06rem; --step-2:1.45rem; --step-4:3.1rem;
+  }
+  *{box-sizing:border-box;}
+  html{color-scheme:dark;}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:var(--step-0);line-height:1.6;-webkit-font-smoothing:antialiased;}
+  a{color:var(--inh);}
+  .wrap{max-width:1180px;margin:0 auto;padding:clamp(18px,3vw,40px) clamp(14px,3vw,32px) 72px;display:flex;flex-direction:column;gap:clamp(22px,3vw,38px);}
+  .top{display:flex;flex-direction:column;gap:14px;}
+  .eyebrow{font-family:var(--f-mono);font-size:var(--step--1);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:10px 18px;align-items:baseline;}
+  .eyebrow b{color:var(--inh);font-weight:500;}
+  h1{font-family:var(--f-display);font-weight:700;font-size:clamp(2rem,5.4vw,var(--step-4));line-height:1.02;letter-spacing:-.015em;margin:0;text-wrap:balance;}
+  h1 .accent{color:transparent;-webkit-text-stroke:1.2px var(--exc);}
+  .lede{max-width:64ch;color:var(--ink-dim);font-size:var(--step-1);margin:0;}
+  .strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0;}
+  .strip div{padding:12px 16px 13px 0;display:flex;flex-direction:column;gap:3px;}
+  .strip dt{font-family:var(--f-mono);font-size:var(--step--1);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);}
+  .strip dd{margin:0;font-family:var(--f-display);font-weight:600;font-size:var(--step-2);font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+  .rig{display:grid;grid-template-columns:minmax(0,1fr) 236px;gap:1px;background:var(--line-soft);border:1px solid var(--line);}
+  @media (max-width:860px){ .rig{grid-template-columns:minmax(0,1fr);} }
+  .stage{position:relative;background:var(--ground);min-height:430px;}
+  canvas{display:block;width:100%;height:100%;position:absolute;inset:0;}
+  .hud{position:absolute;inset:0;padding:18px 20px;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;}
+  .hud-top{display:flex;flex-direction:column;gap:6px;max-width:46ch;}
+  .hud-num{font-family:var(--f-mono);font-size:var(--step--1);letter-spacing:.18em;color:var(--exc);}
+  .hud-title{font-family:var(--f-display);font-weight:600;font-size:var(--step-2);line-height:1.12;margin:0;text-wrap:balance;}
+  .hud-desc{margin:0;color:var(--ink-dim);font-size:var(--step-0);line-height:1.5;}
+  .hud-bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;}
+  .readout{font-family:var(--f-mono);font-size:var(--step--1);color:var(--ink-faint);display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums;}
+  .readout b{color:var(--ink);font-weight:500;}
+  .readout .exc{color:var(--exc);} .readout .inh{color:var(--inh);}
+  .emit{font-family:var(--f-mono);font-size:var(--step-0);color:var(--ink);text-align:right;max-width:42ch;line-height:1.45;}
+  .emit span{color:var(--ink-faint);} .emit .cursor{color:var(--spike);}
+  .rail{background:var(--surface);display:flex;flex-direction:column;}
+  .rail-head{font-family:var(--f-mono);font-size:var(--step--1);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);padding:14px 16px 10px;border-bottom:1px solid var(--line-soft);}
+  .rail-list{display:flex;flex-direction:column;flex:1;}
+  .rail-btn{appearance:none;background:none;border:0;border-left:2px solid transparent;border-bottom:1px solid var(--line-soft);color:var(--ink-dim);font-family:var(--f-body);font-size:var(--step--1);text-align:left;padding:9px 14px;cursor:pointer;display:flex;gap:10px;align-items:baseline;transition:color .18s,border-color .18s,background .18s;}
+  .rail-btn i{font-family:var(--f-mono);font-style:normal;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .rail-btn:hover{color:var(--ink);background:var(--surface-2);}
+  .rail-btn:focus-visible{outline:2px solid var(--inh);outline-offset:-2px;}
+  .rail-btn[aria-current="true"]{color:var(--ink);border-left-color:var(--exc);background:var(--surface-2);}
+  .rail-btn[aria-current="true"] i{color:var(--exc);}
+  .controls{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line-soft);}
+  .ctl{appearance:none;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);font-family:var(--f-mono);font-size:var(--step--1);padding:6px 11px;cursor:pointer;transition:border-color .18s,color .18s;}
+  .ctl:hover{border-color:var(--exc);color:var(--exc);}
+  .ctl:focus-visible{outline:2px solid var(--inh);outline-offset:1px;}
+  .panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:clamp(18px,2.4vw,30px);}
+  .panel h2{font-family:var(--f-display);font-weight:600;font-size:var(--step-1);margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  .panel p{margin:0 0 10px;color:var(--ink-dim);} .panel p:last-child{margin-bottom:0;} .panel strong{color:var(--ink);font-weight:600;}
+  table{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:var(--step--1);font-variant-numeric:tabular-nums;}
+  th{text-align:left;font-weight:500;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase;padding:0 0 6px;border-bottom:1px solid var(--line);}
+  td{padding:6px 0;border-bottom:1px solid var(--line-soft);color:var(--ink-dim);}
+  td:last-child,th:last-child{text-align:right;}
+  tr.pick td{color:var(--ink);} tr.pick td:first-child::before{content:"▸ ";color:var(--exc);}
+  .note{font-size:var(--step--1);color:var(--ink-faint);border-left:2px solid var(--line);padding-left:12px;}
+  footer{font-family:var(--f-mono);font-size:var(--step--1);color:var(--ink-faint);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-wrap:wrap;gap:6px 20px;}
+  @media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms !important;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">
+      <span>male-cns:v1.0</span>
+      <span>Janelia FlyEM · Google Research · Cell, 3 settembre 2026</span>
+      <span><b>CC-BY</b></span>
+      <span><a href="https://github.com/ArtyomITA/flytollm">github.com/ArtyomITA/flytollm</a></span>
+    </div>
+    <h1>Il connettoma <span class="accent">parlante</span></h1>
+    <p class="lede">
+      Il sistema nervoso centrale completo di un moscerino maschio, intero e senza tagli
+      anatomici, usato come nucleo ricorrente spiking di un language model che predice il
+      token successivo. Numeri veri, controlli veri, nessun backbone pre-addestrato.
+    </p>
+    <dl class="strip">
+      <div><dt>Neuroni</dt><dd>166.700</dd></div>
+      <div><dt>Archi fra neuroni</dt><dd>25.582.938</dd></div>
+      <div><dt>Archi a soglia ≥10</dt><dd>2.753.975</dd></div>
+      <div><dt>Parametri</dt><dd>5,46 M</dd></div>
+      <div><dt>Sottopassi per token</dt><dd>4 + 4</dd></div>
+    </dl>
+  </header>
+
+  <section class="rig">
+    <div class="stage">
+      <canvas id="cv" aria-label="Animazione della pipeline dal connettoma al modello linguistico"></canvas>
+      <div class="hud">
+        <div class="hud-top">
+          <div class="hud-num" id="hudNum">FASE 01 / 08</div>
+          <h2 class="hud-title" id="hudTitle">Il connettoma completo</h2>
+          <p class="hud-desc" id="hudDesc">Sistema nervoso centrale intero.</p>
+        </div>
+        <div class="hud-bottom">
+          <div class="readout" id="hudRead"></div>
+          <div class="emit" id="hudEmit"></div>
+        </div>
+      </div>
+    </div>
+    <nav class="rail" aria-label="Fasi della pipeline">
+      <div class="rail-head">Pipeline</div>
+      <div class="rail-list" id="rail"></div>
+      <div class="controls">
+        <button class="ctl" id="btnPlay" type="button">pausa</button>
+        <button class="ctl" id="btnPrev" type="button" aria-label="Fase precedente">◀</button>
+        <button class="ctl" id="btnNext" type="button" aria-label="Fase successiva">▶</button>
+      </div>
+    </nav>
+  </section>
+
+  <section class="panels">
+
+    <article class="panel">
+      <h2>Tutto il sistema nervoso</h2>
+      <p>Nessun ritaglio: lobi ottici, cervello centrale e cordone nervoso ventrale. Il grafo è quello misurato al microscopio elettronico; entrano solo le connessioni con almeno 10 sinapsi.</p>
+      <table>
+        <thead><tr><th>Superclasse</th><th>Neuroni</th></tr></thead>
+        <tbody>
+          <tr><td>ol_intrinsic</td><td>89.403</td></tr>
+          <tr><td>cb_intrinsic</td><td>32.164</td></tr>
+          <tr><td>vnc_intrinsic</td><td>13.161</td></tr>
+          <tr><td>visual_projection</td><td>9.201</td></tr>
+          <tr class="pick"><td>sensoriali, porte del testo</td><td>17.937</td></tr>
+          <tr class="pick"><td>discendenti · motori · efferenti, lettura</td><td>2.241</td></tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <h2>La soglia si misura</h2>
+      <p>Gli archi a poche sinapsi sono in parte rumore di ricostruzione. Invece di scegliere a priori, si confronta a pari dati: <strong>≥10</strong> contro <strong>≥5</strong>, stessi neuroni, stessa init.</p>
+      <table>
+        <thead><tr><th>Soglia</th><th>Archi</th></tr></thead>
+        <tbody>
+          <tr><td>≥ 1</td><td>25.582.938</td></tr>
+          <tr><td>≥ 5 · CE 5,211 a 2000 update</td><td>6.242.118</td></tr>
+          <tr class="pick"><td>≥ 10 · CE 5,087 a 2000 update</td><td>2.753.975</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:12px">Più archi deboli non hanno aiutato: si resta a ≥10.</p>
+    </article>
+
+    <article class="panel">
+      <h2>Attention fuori dal grafo</h2>
+      <p>Il connettoma non ha un asse «posizione nella frase». Una piccola attention causale (4 teste × 64, cache degli ultimi 128 token) sta <strong>fuori</strong> dal cervello: legge lo stato del nucleo e rientra come corrente nelle stesse 17.937 porte sensoriali, con un gate.</p>
+      <p>Misurato a 8000 update: spegnerla costa <strong>0,24 nat</strong>, e tutto il suo contributo viene dagli ultimi 8 token. La memoria lunga, per ora, non c'è.</p>
+    </article>
+
+    <article class="panel">
+      <h2>Profondità, non iperparametro</h2>
+      <p>Ogni sottopasso di simulazione propaga il segnale di un salto sinaptico. Quattro sottopassi con il token, attention, altri quattro con token e feedback: <strong>T = 4 + 4</strong>.</p>
+      <p>Misurato sul grafo: i 2.241 neuroni di lettura stanno a <strong>2 salti</strong> (mediana) dalle porte, tutti entro 4. La profondità basta per costruzione.</p>
+    </article>
+
+    <article class="panel">
+      <h2>Il segno resta fisso</h2>
+      <p>Legge di Dale: un neurone rilascia lo stesso neurotrasmettitore su tutte le uscite. Il gradiente allena solo le magnitudini, inizializzate dal conteggio di sinapsi.</p>
+      <table>
+        <thead><tr><th>Classe</th><th>Neuroni</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--exc)">acetilcolina</td><td>104.193</td></tr>
+          <tr><td style="color:var(--inh)">GABA · glutammato · istamina</td><td>59.663</td></tr>
+          <tr><td style="color:var(--mod)">dopamina · octopamina · serotonina</td><td>545</td></tr>
+          <tr><td>non assegnati</td><td>2.299</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:12px">Copertura 98,6%. Precisione del classificatore ≈ 94% per neurone.</p>
+    </article>
+
+    <article class="panel">
+      <h2>Cosa abbiamo misurato</h2>
+      <p>TinyStories, BPE 4096. Dopo 26.247 update (839.904 token visti) la cross-entropy su 16 storie riservate è <strong>3,634 nat</strong>. Il testo generato ha soggetti e frasi, ripete schemi.</p>
+      <table>
+        <thead><tr><th>A pari dati · 8000 update</th><th>CE</th></tr></thead>
+        <tbody>
+          <tr class="pick"><td>mosca, cablaggio reale</td><td>3,959</td></tr>
+          <tr><td>mosca, cablaggio rimescolato</td><td>3,814</td></tr>
+          <tr><td>GRU 2×256</td><td>3,429</td></tr>
+          <tr><td>Transformer 2 blocchi</td><td>3,563</td></tr>
+          <tr><td>trigramma Kneser-Ney</td><td>3,410</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:12px">Il cablaggio anatomico oggi non aiuta: è un vincolo su un compito estraneo alla mosca. Il lobo ottico intero (89.403 neuroni) si può rimuovere senza cambiare la CE. Lo scopo non è la gara: è capire cosa fa il cervello quando lo si costringe a parlare.</p>
+    </article>
+
+  </section>
+
+  <footer>
+    <span>GTX 1080 · 8 GB · Pascal sm_61</span>
+    <span>torch 2.14.0+cu126 · CUDA Graph FP32</span>
+    <span>TinyStories · BPE 4096</span>
+    <span>TBPTT 8 token · Adam 1e-4 · batch 2</span>
+    <span>0,65 s per update</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d', {alpha:false});
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var C = { ground:'#070a0e', line:'#1d2b39', exc:'#ffbe5c', inh:'#4fd0ff', mod:'#c08cff', spike:'#fff6e3', ink:'#dce6f0', dim:'#7e91a6', faint:'#4d5f71' };
+
+  var STAGES = [
+    { t:'Il connettoma completo',
+      d:'Sistema nervoso centrale del moscerino maschio: cervello, entrambi i lobi ottici e cordone nervoso ventrale. 166.700 neuroni, nessun taglio.', dur:7000 },
+    { t:'Soglia sugli archi',
+      d:'Le connessioni a poche sinapsi sono in parte rumore di ricostruzione. Si tengono gli archi con almeno 10 sinapsi: 2.753.975. Il confronto con ≥5 è stato misurato, non assunto.', dur:9000 },
+    { t:'Riordino funzionale',
+      d:'Stessi neuroni, disposti per ruolo invece che per anatomia: i 17.937 sensoriali a sinistra sono le porte del testo, i 2.241 discendenti e motori a destra sono la lettura. Nessuno viene scartato.', dur:7000 },
+    { t:'Segno dal neurotrasmettitore',
+      d:'Legge di Dale: acetilcolina eccitatoria, GABA, glutammato e istamina inibitori. Il segno resta inchiodato, il gradiente muove solo le magnitudini.', dur:7500 },
+    { t:'Iniezione del token',
+      d:'Il token BPE (vocabolario 4096) diventa un vettore di 256 dimensioni, il vettore diventa corrente iniettata nei 17.937 neuroni sensoriali, otto canali per porta.', dur:8000 },
+    { t:'Nucleo ricorrente e attention',
+      d:'Quattro sottopassi di simulazione LIF col token; poi una piccola attention esterna legge lo stato, richiama gli ultimi 128 token e rientra come corrente dalle porte; altri quattro sottopassi.', dur:9500 },
+    { t:'Lettura e softmax',
+      d:'Potenziale e tasso di spike dei 2.241 neuroni discendenti e motori, raggruppati in 77 popolazioni, passano in una proiezione a 256 dimensioni e in una softmax sui 4096 token.', dur:8000 },
+    { t:'Addestramento',
+      d:'Gradiente surrogato all’indietro attraverso gli spike, troncato a 8 token, Adam. I segni restano congelati: si muovono solo le magnitudini delle 2.753.975 sinapsi.', dur:9000 },
+    { t:'Lesioni e controlli',
+      d:'Rimuovere il lobo ottico intero, 89.403 neuroni, non cambia la cross-entropy. Rimescolare le connessioni a gradi conservati la migliora: 3,96 → 3,81 nat. Il cablaggio anatomico, oggi, è un vincolo.', dur:12000 }
+  ];
+
+  var READ = [
+    [['neuroni','166.700'],['archi','25.582.938'],['soglia ≥10','2.753.975']],
+    [['soglia','≥10'],['archi tenuti','2.753.975'],['scartati','89,2%']],
+    [['sensoriali','17.937'],['discendenti+motori','2.241'],['intrinseci','146.522']],
+    [['eccitatori','104.193'],['inibitori','59.663'],['copertura','98,6%']],
+    [['porte','17.937'],['embedding','d = 256'],['vocabolario','4096 BPE']],
+    [['sottopassi','4 + 4'],['attention','4 teste · KV 128'],['modello','LIF']],
+    [['lettura','2.241 → 77 → 256'],['uscita','softmax 4096'],['perdita','cross-entropy']],
+    [['TBPTT','8 token'],['ottimizzatore','Adam 1e-4'],['CE · 26.247 update','3,634 nat']],
+    [['lobo ottico rimosso','ΔCE −0,000'],['reale · 8000','3,96 nat'],['rimescolato · 8000','3,81 nat']]
+  ];
+
+  var S_SOGLIA=1, S_RIORDINO=2, S_DALE=3, S_IN=4, S_CORE=5, S_OUT=6, S_TRAIN=7, S_LESION=8;
+  var NSTAGES=STAGES.length;
+
+  var N = 2400, P = [];
+  var R_OL_L=0, R_OL_R=1, R_CB=2, R_VNC=3;
+  var ROLE_INT=0, ROLE_SEN=1, ROLE_DES=2;
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+  function gauss(){ return (Math.random()+Math.random()+Math.random()+Math.random()-2)/2; }
+  for(var i=0;i<N;i++){
+    var r=Math.random(), region;
+    if(r<0.31) region=R_OL_L; else if(r<0.62) region=R_OL_R; else if(r<0.86) region=R_CB; else region=R_VNC;
+    var role=ROLE_INT, q=Math.random();
+    if(region===R_OL_L||region===R_OL_R){ if(q<0.058) role=ROLE_SEN; }
+    else if(region===R_CB){ if(q<0.127) role=ROLE_SEN; else if(q<0.164) role=ROLE_DES; }
+    else { if(q<0.31) role=ROLE_SEN; else if(q<0.345) role=ROLE_DES; }
+    var s=Math.random(), sign;
+    if(s<0.634) sign=0; else if(s<0.997) sign=1; else sign=2;
+    var hop = role===ROLE_SEN ? 0 : (role===ROLE_DES ? (Math.random()<0.6?2:3) : 1+(Math.random()<0.55?1:0)+(Math.random()<0.15?1:0));
+    P.push({region:region, role:role, sign:sign, hop:hop, x:0,y:0,hx:0,hy:0,cx:0,cy:0, act:0, seed:Math.random()*Math.PI*2, drift:rnd(.5,1.6)});
+  }
+  var SEN=[], DES=[], INT=[];
+  for(i=0;i<N;i++){ if(P[i].role===ROLE_SEN) SEN.push(i); else if(P[i].role===ROLE_DES) DES.push(i); else INT.push(i); }
+
+  var EDGES=[], rewire=0;
+  function pesoSintetico(){ var u=Math.random(); return Math.max(1, Math.round(Math.pow(1/(1-u*0.995), 1.15))); }
+  function addEdge(a,b){ EDGES.push({a:a,b:b,b2:(Math.random()*N)|0,w:pesoSintetico()}); }
+  function buildEdges(){
+    EDGES.length=0; var k,a,b;
+    for(k=0;k<170;k++){ a=SEN[(Math.random()*SEN.length)|0]; b=INT[(Math.random()*INT.length)|0]; if(a!==undefined&&b!==undefined) addEdge(a,b); }
+    for(k=0;k<170;k++){ a=INT[(Math.random()*INT.length)|0]; b=DES[(Math.random()*DES.length)|0]; if(a!==undefined&&b!==undefined) addEdge(a,b); }
+    for(k=0;k<700;k++){
+      a=INT[(Math.random()*INT.length)|0]; b=INT[(Math.random()*INT.length)|0];
+      if(a===undefined||b===undefined||a===b) continue;
+      var dx=P[a].cx-P[b].cx, dy=P[a].cy-P[b].cy, d=Math.sqrt(dx*dx+dy*dy);
+      if(d<0.30 || Math.random()<0.22) addEdge(a,b);
+    }
+  }
+  /* endpoint di un arco: durante la fase lesioni la destinazione scivola verso un nodo casuale (rimescolamento) */
+  function endB(e){
+    var pb=pos(P[e.b]);
+    if(rewire<=0) return pb;
+    var pr=pos(P[e.b2]);
+    return [pb[0]+(pr[0]-pb[0])*rewire, pb[1]+(pr[1]-pb[1])*rewire];
+  }
+
+  var sprites={};
+  function makeSprite(color,size){
+    var c=document.createElement('canvas'); c.width=c.height=size; var g=c.getContext('2d');
+    var grd=g.createRadialGradient(size/2,size/2,0,size/2,size/2,size/2);
+    grd.addColorStop(0,color); grd.addColorStop(0.26,color); grd.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=grd; g.beginPath(); g.arc(size/2,size/2,size/2,0,Math.PI*2); g.fill(); return c;
+  }
+  function hexA(hex,a){ var n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+  function initSprites(){
+    sprites.exc=makeSprite(hexA(C.exc,.85),26); sprites.inh=makeSprite(hexA(C.inh,.85),26); sprites.mod=makeSprite(hexA(C.mod,.85),26);
+    sprites.dim=makeSprite('rgba(125,145,166,.6)',22); sprites.spike=makeSprite(hexA(C.spike,.95),40);
+    sprites.orbE=makeSprite(hexA(C.exc,.5),200); sprites.orbI=makeSprite(hexA(C.inh,.5),200); sprites.orbM=makeSprite(hexA(C.mod,.5),200);
+  }
+
+  var W=0,H=0,DPR=1;
+  function layout(){
+    var rect=cv.parentNode.getBoundingClientRect();
+    W=Math.max(320,rect.width); H=Math.max(390,rect.height);
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+    var cx=W*0.5, cy=H*0.45;
+    for(var i=0;i<N;i++){
+      var p=P[i], a=Math.random()*Math.PI*2, rr=Math.sqrt(Math.random());
+      if(p.region===R_OL_L){ p.hx=cx-W*0.285+Math.cos(a)*rr*W*0.115; p.hy=cy-H*0.02+Math.sin(a)*rr*H*0.21; }
+      else if(p.region===R_OL_R){ p.hx=cx+W*0.285+Math.cos(a)*rr*W*0.115; p.hy=cy-H*0.02+Math.sin(a)*rr*H*0.21; }
+      else if(p.region===R_CB){ p.hx=cx+Math.cos(a)*rr*W*0.125; p.hy=cy-H*0.05+Math.sin(a)*rr*H*0.165; }
+      else { p.hx=cx+gauss()*W*0.035; p.hy=cy+H*0.27+Math.abs(gauss())*H*0.19; }
+    }
+    var L=W*0.155, Rr=W*0.845, midY=H*0.50;
+    for(i=0;i<N;i++){
+      var q=P[i];
+      if(q.role===ROLE_SEN){ q.cx=L+gauss()*W*0.018; q.cy=midY+gauss()*H*0.215; }
+      else if(q.role===ROLE_DES){ q.cx=Rr+gauss()*W*0.018; q.cy=midY+gauss()*H*0.17; }
+      else { var aa=Math.random()*Math.PI*2, rb=Math.sqrt(Math.random()); q.cx=W*0.5-W*0.005+Math.cos(aa)*rb*W*0.235; q.cy=midY+Math.sin(aa)*rb*H*0.245; }
+    }
+    buildEdges();
+  }
+
+  function drawOrb(x,y,r,formula,label,color,glow,pulse,ring){
+    var g=ctx.globalCompositeOperation; ctx.globalCompositeOperation='lighter';
+    var s=r*(3.1+pulse*0.5); ctx.globalAlpha=0.5+pulse*0.35; ctx.drawImage(glow,x-s/2,y-s/2,s,s);
+    ctx.globalCompositeOperation=g; ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.strokeStyle=hexA(color,.85); ctx.lineWidth=1.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x,y,r*(1.34+pulse*0.12),0,Math.PI*2); ctx.strokeStyle=hexA(color,.22); ctx.lineWidth=1; ctx.stroke();
+    if(ring){
+      var rot=T*0.00042, rr=r*1.34+8;
+      ctx.font='9px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(color,.5); ctx.textAlign='center'; ctx.textBaseline='middle';
+      for(var k=0;k<ring.length;k++){
+        var ang=rot+k/ring.length*Math.PI*2;
+        ctx.save(); ctx.translate(x+Math.cos(ang)*rr, y+Math.sin(ang)*rr); ctx.rotate(ang+Math.PI/2); ctx.fillText(ring[k],0,0); ctx.restore();
+      }
+    }
+    ctx.font='11px "IBM Plex Mono",monospace'; ctx.fillStyle=C.ink; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(formula,x,y);
+    ctx.font='9px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(color,.75); ctx.fillText(label.toUpperCase(),x,y+r+15);
+  }
+
+  var stage=0, T=0, stageT=0, playing=!reduce, last=0;
+  var blend=0, soglia=1, soglieVis=[1,5,10];
+  var spikes=[], sub=0, subPhase=0, beams=[], olFade=1;
+  var trace=[], lossPts=[], lossCtrl=[];
+  var emitted='', emitIdx=0, emitTimer=0;
+  var TARGET=", there was a little girl named Tim. The girl was a big dog named. The dog was very happy.";
+  var INPUT ="Once upon a time";
+  var TOKENS=["Once"," upon"," a"," time"];
+  var inChars=[], barVals=[];
+  for(var li=0;li<90;li++){ lossPts.push(0); lossCtrl.push(0); }
+  for(var ti=0;ti<160;ti++) trace.push(0);
+
+  function resetStage(s){
+    spikes.length=0; beams.length=0; sub=0; subPhase=0; rewire=0; olFade=1;
+    if(s<S_OUT){ emitted=''; emitIdx=0; }
+    if(s>=S_IN){ inChars=[]; for(var k=0;k<TOKENS.length;k++) inChars.push({ch:TOKENS[k],t:-k*0.22,done:false}); }
+    for(var i=0;i<N;i++) P[i].act=0;
+  }
+  function setStage(s,manual){
+    stage=(s+STAGES.length)%STAGES.length; stageT=0; resetStage(stage);
+    if(stage<S_SOGLIA) soglia=1;
+    document.getElementById('hudNum').textContent='FASE '+String(stage+1).padStart(2,'0')+' / '+String(NSTAGES).padStart(2,'0');
+    document.getElementById('hudTitle').textContent=STAGES[stage].t;
+    document.getElementById('hudDesc').textContent=STAGES[stage].d;
+    var rd=READ[stage], html='';
+    for(var i=0;i<rd.length;i++){ var cls = stage===S_DALE ? (i===0?'exc':(i===1?'inh':'')) : ''; html+='<span>'+rd[i][0]+' <b class="'+cls+'">'+rd[i][1]+'</b></span>'; }
+    document.getElementById('hudRead').innerHTML=html;
+    var btns=document.querySelectorAll('.rail-btn');
+    for(i=0;i<btns.length;i++) btns[i].setAttribute('aria-current', i===stage?'true':'false');
+    if(manual&&!reduce){ playing=true; document.getElementById('btnPlay').textContent='pausa'; }
+  }
+
+  function pos(p){ return [p.hx+(p.cx-p.hx)*blend, p.hy+(p.cy-p.hy)*blend]; }
+
+  function backdrop(){
+    /* griglia tenue e vignetta: profondità di campo */
+    ctx.strokeStyle='rgba(79,208,255,0.035)'; ctx.lineWidth=1;
+    var step=Math.max(36,W/28), off=(T*0.01)%step;
+    ctx.beginPath();
+    for(var gx=-step+off;gx<W+step;gx+=step){ ctx.moveTo(gx,0); ctx.lineTo(gx,H); }
+    for(var gy=-step+off*0.6;gy<H+step;gy+=step){ ctx.moveTo(0,gy); ctx.lineTo(W,gy); }
+    ctx.stroke();
+    var vg=ctx.createRadialGradient(W*0.5,H*0.5,H*0.25,W*0.5,H*0.5,Math.max(W,H)*0.75);
+    vg.addColorStop(0,'rgba(7,10,14,0)'); vg.addColorStop(1,'rgba(7,10,14,0.55)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  }
+
+  function draw(dt){
+    ctx.fillStyle='rgba(7,10,14,0.30)'; ctx.fillRect(0,0,W,H);
+    backdrop();
+    var showEdges = stage>=S_SOGLIA ? Math.min(1,stageT/1200) : 0;
+    var i,p;
+    if(showEdges>0){
+      ctx.lineWidth=0.6;
+      for(i=0;i<EDGES.length;i++){
+        var e=EDGES[i]; if(e.w<soglia) continue;
+        var a=P[e.a], b=P[e.b], pa=pos(a), pb=endB(e), al=0.06*showEdges, act=(a.act+b.act)*0.5;
+        if(stage===S_LESION && olFade<1 && (a.region<=R_OL_R || b.region<=R_OL_R)) al*=olFade;
+        ctx.strokeStyle = act>0.08 ? hexA(C.spike,Math.min(.5,al+act*0.42)) : (rewire>0 ? hexA(C.mod,al+rewire*0.05) : hexA('#4fd0ff',al));
+        ctx.beginPath(); ctx.moveTo(pa[0],pa[1]); ctx.quadraticCurveTo((pa[0]+pb[0])/2,(pa[1]+pb[1])/2-26,pb[0],pb[1]); ctx.stroke();
+      }
+    }
+    ctx.globalCompositeOperation='lighter';
+    for(i=0;i<N;i++){
+      p=P[i]; var pp=pos(p);
+      var px=pp[0]+Math.sin(T*0.0004*p.drift+p.seed)*1.6, py=pp[1]+Math.cos(T*0.00035*p.drift+p.seed)*1.6;
+      var sp,sz=3.5;
+      if(stage<S_DALE){ sp=sprites.dim; sz=3.4; } else sp = p.sign===0?sprites.exc:(p.sign===1?sprites.inh:sprites.mod);
+      var a2=(stage<S_DALE?0.52:0.5)+p.act*0.85; sz+=p.act*7;
+      if(stage===S_LESION && p.region<=R_OL_R) a2*=Math.max(0.06,olFade);
+      ctx.globalAlpha=Math.min(1,a2); ctx.drawImage(sp,px-sz,py-sz,sz*2,sz*2); p.act*=0.935;
+    }
+    ctx.globalAlpha=1;
+    for(i=spikes.length-1;i>=0;i--){
+      var s=spikes[i]; s.t+=dt*0.0022*s.sp;
+      if(s.t>=1){ P[s.b].act=Math.min(1,P[s.b].act+0.85); spikes.splice(i,1); continue; }
+      var A=pos(P[s.a]), B=(s.e&&rewire>0)?endB(s.e):pos(P[s.b]), mx=(A[0]+B[0])/2, my=(A[1]+B[1])/2-26, u=1-s.t;
+      var sx=u*u*A[0]+2*u*s.t*mx+s.t*s.t*B[0], sy=u*u*A[1]+2*u*s.t*my+s.t*s.t*B[1], sz2=s.back?4:5.5;
+      /* scia: tre copie sbiadite dietro lo spike */
+      for(var g=3;g>=1;g--){
+        var tg=Math.max(0,s.t-g*0.05), ug=1-tg;
+        var gx=ug*ug*A[0]+2*ug*tg*mx+tg*tg*B[0], gy=ug*ug*A[1]+2*ug*tg*my+tg*tg*B[1];
+        ctx.globalAlpha=0.9*(0.35-g*0.09); ctx.drawImage(s.back?sprites.mod:sprites.spike,gx-sz2*0.7,gy-sz2*0.7,sz2*1.4,sz2*1.4);
+      }
+      ctx.globalAlpha=0.9; ctx.drawImage(s.back?sprites.mod:sprites.spike,sx-sz2,sy-sz2,sz2*2,sz2*2);
+    }
+    /* fasci di richiamo dall'attention alle porte */
+    for(i=beams.length-1;i>=0;i--){
+      var bm=beams[i]; bm.life-=dt*0.0025;
+      if(bm.life<=0){ beams.splice(i,1); continue; }
+      var Pn=pos(P[bm.n]);
+      ctx.globalAlpha=Math.min(1,bm.life)*0.55; ctx.strokeStyle=hexA(C.mod,1); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(bm.x,bm.y); ctx.quadraticCurveTo((bm.x+Pn[0])/2,(bm.y+Pn[1])/2+40,Pn[0],Pn[1]); ctx.stroke();
+    }
+    ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+    if(stage>=S_RIORDINO && blend>0.35){
+      ctx.font='10px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.globalAlpha=Math.min(1,(blend-0.35)/0.3);
+      ctx.fillStyle=hexA(C.exc,.75); ctx.fillText('porte sensoriali · 17.937', W*0.155, H*0.795);
+      ctx.fillStyle=hexA(C.inh,.75); ctx.fillText('lettura · 2.241', W*0.845, H*0.795);
+      ctx.fillStyle=hexA(C.faint,1); ctx.fillText('intrinseci · 146.522', W*0.5, H*0.845);
+      ctx.globalAlpha=1;
+    }
+    extras(dt);
+  }
+
+  function extras(dt){
+    var pulse=(Math.sin(T*0.003)+1)/2;
+    if(stage===S_SOGLIA){
+      var etichette={1:'≥1  ·  25.582.938 archi',5:'≥5  ·  6.242.118 archi',10:'≥10  ·  2.753.975 archi'};
+      ctx.font='600 13px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=C.exc;
+      ctx.fillText('SOGLIA '+etichette[soglia], W*0.5, H*0.085);
+      ctx.font='9px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.dim,.8);
+      ctx.fillText('≥5 confrontato a pari dati: 5,211 contro 5,087 · si resta a ≥10', W*0.5, H*0.125);
+    }
+    if(stage===S_DALE){ drawOrb(W*0.5,H*0.50,24,'sign(nt)','legge di Dale',C.mod,sprites.orbM,pulse,'ACh+·GABA−·Glu−·His−·'); }
+    if(stage===S_IN){
+      drawOrb(W*0.075,H*0.50,20,'E[tok]','embedding',C.exc,sprites.orbE,pulse,'BPE·4096·d=256·fan-in·8·');
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      for(var i=0;i<inChars.length;i++){
+        var c=inChars[i]; if(c.t<0) continue; var tt=Math.min(1,c.t);
+        var yy=H*0.50+Math.sin(i*1.3)*34;
+        /* il token viaggia verso le porte; da metà strada esplode in 8 canali */
+        for(var g=4;g>=0;g--){
+          var tg=Math.max(0,tt-g*0.04);
+          ctx.globalAlpha=(g===0?1:0.18-g*0.03)*Math.min(1,tt*2)*(1-Math.max(0,(tt-0.85)/0.15));
+          ctx.font=(g===0?'600 ':'')+'13px "IBM Plex Mono",monospace'; ctx.fillStyle=C.spike;
+          ctx.fillText(c.ch, W*0.012+tg*(W*0.09), yy);
+        }
+        if(tt>0.5){
+          ctx.strokeStyle=hexA(C.exc,(1-Math.max(0,(tt-0.85)/0.15))*0.35); ctx.lineWidth=0.8;
+          for(var ch=0;ch<8;ch++){
+            var tx=W*0.012+tt*(W*0.09)+30, ty=yy+(ch-3.5)*6*(tt-0.5)*2;
+            ctx.beginPath(); ctx.moveTo(tx-20,yy); ctx.lineTo(tx+(tt-0.5)*W*0.12,ty); ctx.stroke();
+          }
+        }
+      }
+      ctx.globalAlpha=1;
+    }
+    if(stage===S_CORE){
+      ctx.font='600 11px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      for(var k=0;k<8;k++){
+        var bx=W*0.5+(k-3.5)*26+(k>=4?10:-10), by=H*0.105, on=k<=sub;
+        ctx.fillStyle=on?hexA(C.exc,.9):hexA(C.faint,.3); ctx.fillRect(bx-9,by-7,18,14);
+        ctx.fillStyle=on?C.ground:C.faint; ctx.fillText(String(k+1),bx,by);
+      }
+      ctx.font='9px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.dim,.8);
+      ctx.fillText('4 SOTTOPASSI · ATTENTION ESTERNA · 4 SOTTOPASSI', W*0.5, H*0.052);
+      ctx.fillStyle=hexA(C.exc,.9);
+      ctx.fillText('SALTO SINAPTICO '+Math.min(3,(sub%4))+' · LETTURA A 2 SALTI DALLE PORTE', W*0.5, H*0.15);
+      drawOrb(W*0.5,H*0.50,25,'τ dV/dt','LIF',C.inh,sprites.orbI,pulse,'leak·0,95·soglia·reset·');
+      /* anello della KV cache: 128 slot, gli ultimi 8 accesi (dove sta tutto il contributo misurato) */
+      var ax=W*0.5, ay=H*0.86, ar=30, head=(T*0.0006)%(Math.PI*2);
+      for(var q=0;q<128;q++){
+        var ang=-Math.PI/2+q/128*Math.PI*2, hot=q>=120, rr1=ar+4, rr2=ar+(hot?12:8);
+        ctx.strokeStyle=hot?hexA(C.exc,.9):hexA(C.mod,.25); ctx.lineWidth=hot?1.6:0.8;
+        ctx.beginPath(); ctx.moveTo(ax+Math.cos(ang)*rr1,ay+Math.sin(ang)*rr1); ctx.lineTo(ax+Math.cos(ang)*rr2,ay+Math.sin(ang)*rr2); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(ax+Math.cos(head)*(ar+8),ay+Math.sin(head)*(ar+8),2.5,0,Math.PI*2); ctx.fillStyle=C.spike; ctx.fill();
+      drawOrb(ax,ay,18,'softmax(QKᵀ)V','attention · KV 128',C.mod,sprites.orbM,pulse,null);
+      ctx.font='8px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.faint,1); ctx.textAlign='center';
+      ctx.fillText('ULTIMI 8 TOKEN = 0,22 NAT · OLTRE 32 = NIENTE', ax, ay+ar+22);
+      drawTrace(W*0.045,H*0.90,W*0.26,44);
+    }
+    if(stage===S_LESION){
+      ctx.font='600 12px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      if(stageT<6000){
+        ctx.fillStyle=hexA(C.inh,.9); ctx.fillText('LESIONE · LOBO OTTICO INTERO RIMOSSO · 89.403 NEURONI', W*0.5, H*0.085);
+        ctx.font='9px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.dim,.85);
+        ctx.fillText('ΔCE = −0,0002 nat · controllo random a pari grado: +4,53', W*0.5, H*0.125);
+      } else {
+        ctx.fillStyle=hexA(C.mod,.95); ctx.fillText('CONTROLLO · CONNESSIONI RIMESCOLATE A GRADI CONSERVATI', W*0.5, H*0.085);
+        ctx.font='9px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.dim,.85);
+        ctx.fillText('stessi neuroni, stessi gradi, stessi segni, stessa init · CE 3,96 → 3,81 nat', W*0.5, H*0.125);
+      }
+      drawOrb(W*0.5,H*0.50,24,stageT<6000?'CE(G∖OL)':'CE(π(G))', stageT<6000?'lesione':'null model',C.mod,sprites.orbM,pulse,stageT<6000?'89.403·nodi·0·archi·':'gradi·segni·porte·init·');
+      drawLoss(W*0.045,H*0.115,W*0.25,60);
+      ctx.font='9px "IBM Plex Mono",monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillStyle=hexA(C.exc,.9); ctx.fillText('CONNETTOMA REALE     3,96 nat', W*0.045, H*0.115+68);
+      ctx.fillStyle=hexA(C.mod,.95); ctx.fillText('GRAFO RIMESCOLATO    3,81 nat', W*0.045, H*0.115+82);
+      ctx.fillStyle=hexA(C.faint,.8); ctx.fillText('DEV16 · 8000 update · 208.271 target · 2 seed', W*0.045, H*0.115+96);
+    }
+    if(stage===S_OUT){
+      drawOrb(W*0.925,H*0.50,22,'softmax','lettura',C.inh,sprites.orbI,pulse,'77·gruppi·256·4096·');
+      drawBars(W*0.79,H*0.66,W*0.155,50);
+    }
+    if(stage===S_TRAIN){
+      drawOrb(W*0.5,H*0.50,25,'∂S/∂V','gradiente surrogato',C.mod,sprites.orbM,pulse,'sigmoide·TBPTT·8·Adam·');
+      drawLoss(W*0.045,H*0.115,W*0.25,60);
+      ctx.font='9px "IBM Plex Mono",monospace'; ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillStyle=hexA(C.exc,.9); ctx.fillText('CE DEV  8,38 → 5,09 → 3,96 → 3,63', W*0.045, H*0.115+68);
+      ctx.fillStyle=hexA(C.faint,.8); ctx.fillText('init · 2000 · 8000 · 26.247 update', W*0.045, H*0.115+82);
+      ctx.fillStyle=hexA(C.faint,.8); ctx.fillText('839.904 token visti · 0,65 s per update', W*0.045, H*0.115+96);
+      ctx.textAlign='right'; ctx.fillStyle=hexA(C.exc,.85); ctx.fillText('SEGNI CONGELATI', W*0.955, H*0.115);
+      ctx.fillStyle=hexA(C.dim,.8); ctx.fillText('magnitudini allenabili · 5,46 M', W*0.955, H*0.115+14);
+    }
+  }
+
+  function drawTrace(x,y,w,h){
+    ctx.strokeStyle=hexA(C.line,1); ctx.lineWidth=1; ctx.strokeRect(x,y-h,w,h);
+    ctx.beginPath();
+    for(var i=0;i<trace.length;i++){ var px=x+i/(trace.length-1)*w, py=y-2-trace[i]*(h-6); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+    ctx.strokeStyle=hexA(C.inh,.9); ctx.lineWidth=1.2; ctx.stroke();
+    ctx.font='8px "IBM Plex Mono",monospace'; ctx.textAlign='left'; ctx.textBaseline='bottom'; ctx.fillStyle=hexA(C.faint,1); ctx.fillText('V(t) · MEMBRANA', x, y-h-4);
+  }
+  function drawLoss(x,y,w,h){
+    ctx.strokeStyle=hexA(C.line,1); ctx.lineWidth=1; ctx.strokeRect(x,y,w,h);
+    var series=[[lossCtrl,hexA(C.faint,.9),1],[lossPts,hexA(C.exc,.95),1.4]];
+    for(var s=0;s<series.length;s++){
+      var arr=series[s][0]; ctx.beginPath();
+      for(var i=0;i<arr.length;i++){ var px=x+i/(arr.length-1)*w, py=y+h-arr[i]*(h-4)-2; if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+      ctx.strokeStyle=series[s][1]; ctx.lineWidth=series[s][2]; ctx.stroke();
+    }
+    ctx.font='8px "IBM Plex Mono",monospace'; ctx.textAlign='left'; ctx.textBaseline='bottom'; ctx.fillStyle=hexA(C.faint,1); ctx.fillText('CROSS-ENTROPY · NAT', x, y-4);
+  }
+  function drawBars(x,y,w,h){
+    if(barVals.length===0){ for(var b=0;b<18;b++) barVals.push(Math.random()*0.3); }
+    var bw=w/barVals.length;
+    for(var i=0;i<barVals.length;i++){ var hh=barVals[i]*h; ctx.fillStyle = i===7 ? hexA(C.spike,.95) : hexA(C.inh,.4); ctx.fillRect(x+i*bw, y+h-hh, bw-1.6, hh); }
+    ctx.font='8px "IBM Plex Mono",monospace'; ctx.textAlign='left'; ctx.textBaseline='bottom'; ctx.fillStyle=hexA(C.faint,1); ctx.fillText('p(token successivo)', x, y-4);
+  }
+
+  function update(dt){
+    stageT+=dt; var st=STAGES[stage];
+    var target = stage>=S_RIORDINO ? 1 : 0; blend += (target-blend)*Math.min(1,dt*0.0016);
+    if(stage===S_SOGLIA){ var idx = stageT<2600 ? 0 : (stageT<6000 ? 1 : 2); soglia = soglieVis[idx]; }
+    if(stage===S_IN){
+      for(var i=0;i<inChars.length;i++){
+        inChars[i].t += dt*0.00055;
+        if(inChars[i].t>0.9 && !inChars[i].done){ inChars[i].done=true; for(var k=0;k<8;k++){ var s=SEN[(Math.random()*SEN.length)|0]; if(s!==undefined) P[s].act=1; } }
+      }
+    }
+    if(stage===S_DALE && Math.random()<0.4){ var q=INT[(Math.random()*INT.length)|0]; if(q!==undefined) P[q].act=Math.min(1,P[q].act+0.45); }
+    if(stage===S_CORE||stage===S_OUT||stage===S_TRAIN||stage===S_LESION){ subPhase+=dt; if(subPhase > (stage===S_CORE?330:270)){ subPhase=0; sub=(sub+1)%8; fire(); } }
+    if(stage===S_CORE){ var lastV=trace[trace.length-1]; var v=lastV*0.93+(sub===0||sub===4?0.55:0.12)*Math.random(); if(v>0.82) v=0.02; trace.push(v); trace.shift(); }
+    if(stage===S_TRAIN){
+      for(var j=0;j<lossPts.length;j++){
+        lossPts[j] += (Math.exp(-j/26)*0.80+0.16 - lossPts[j])*0.045;
+        lossCtrl[j] += (Math.exp(-j/26)*0.80+0.16 - lossCtrl[j])*0.045;
+      }
+    }
+    if(stage===S_LESION){
+      olFade = stageT<6000 ? Math.max(0.06, 1-stageT/2200) : Math.min(1, olFade+dt*0.0008);
+      rewire = stageT<6000 ? 0 : Math.min(1,(stageT-6000)/2600);
+      for(var j2=0;j2<lossPts.length;j2++){
+        lossPts[j2] += (Math.exp(-j2/26)*0.80+0.16 - lossPts[j2])*0.045;
+        lossCtrl[j2] += (Math.exp(-j2/26)*0.80+(stageT<6000?0.16:0.10) - lossCtrl[j2])*0.045;
+      }
+    }
+    if(stage===S_OUT && Math.random()<0.14){ for(var b=0;b<barVals.length;b++) barVals[b] = b===7 ? 0.55+Math.random()*0.45 : Math.random()*0.34; }
+    if(stage===S_OUT||stage===S_TRAIN||stage===S_LESION){ emitTimer+=dt; if(emitTimer>(stage===S_OUT?190:95) && emitIdx<TARGET.length){ emitTimer=0; emitted+=TARGET[emitIdx++]; } }
+    var el=document.getElementById('hudEmit');
+    if(stage===S_OUT||stage===S_TRAIN||stage===S_LESION) el.innerHTML='<span>'+INPUT+' →</span> '+emitted+'<span class="cursor">▌</span>';
+    else if(stage===S_IN) el.innerHTML='<span>ingresso →</span> '+INPUT+'<span class="cursor">▌</span>';
+    else el.innerHTML='';
+    if(playing && stageT>st.dur) setStage(stage+1,false);
+  }
+
+  function fire(){
+    var count = stage===S_TRAIN?14:22;
+    for(var i=0;i<count;i++){
+      var e=EDGES[(Math.random()*EDGES.length)|0]; if(!e || e.w<soglia) continue;
+      if(stage===S_LESION && stageT<6000 && (P[e.a].region<=R_OL_R || P[e.b].region<=R_OL_R)) continue;
+      P[e.a].act=Math.min(1,P[e.a].act+0.75); spikes.push({a:e.a,b:e.b,e:e,t:0,sp:0.8+Math.random()*0.7,back:false});
+    }
+    if(stage===S_CORE){
+      /* onda per salti: al sottopasso k si accendono i neuroni a k salti dalle porte */
+      var hopNow=sub%4;
+      for(var h=0;h<N;h++){ if(P[h].hop===hopNow && Math.random()<0.18) P[h].act=Math.min(1,P[h].act+0.8); }
+      if(sub===4){
+        for(var f=0;f<14;f++){ var sn=SEN[(Math.random()*SEN.length)|0]; if(sn!==undefined){ P[sn].act=Math.min(1,P[sn].act+0.9); beams.push({x:W*0.5,y:H*0.86,n:sn,life:1}); } }
+      }
+    }
+    if(stage===S_LESION && stageT<6000){
+      for(var h2=0;h2<N;h2++){ if(P[h2].region<=R_OL_R) P[h2].act=0; }
+    }
+    if(stage===S_TRAIN){
+      for(var k=0;k<16;k++){ var e2=EDGES[(Math.random()*EDGES.length)|0]; if(!e2||e2.w<soglia) continue; spikes.push({a:e2.b,b:e2.a,t:0,sp:0.7+Math.random()*0.5,back:true}); }
+    }
+    if(sub===7 && stage===S_CORE){ for(var d=0;d<12;d++){ var dn=DES[(Math.random()*DES.length)|0]; if(dn!==undefined) P[dn].act=1; } }
+  }
+
+  function frame(ts){ var dt=Math.min(50,ts-last||16); last=ts; T+=dt; if(playing && !reduce) update(dt); draw(dt); requestAnimationFrame(frame); }
+
+  var rail=document.getElementById('rail');
+  for(var si=0;si<STAGES.length;si++){
+    (function(idx){
+      var btn=document.createElement('button'); btn.className='rail-btn'; btn.type='button';
+      btn.innerHTML='<i>'+String(idx+1).padStart(2,'0')+'</i><span>'+STAGES[idx].t+'</span>';
+      btn.addEventListener('click',function(){ setStage(idx,true); }); rail.appendChild(btn);
+    })(si);
+  }
+  document.getElementById('btnPlay').addEventListener('click',function(){ playing=!playing; this.textContent=playing?'pausa':'avvia'; });
+  document.getElementById('btnPrev').addEventListener('click',function(){ setStage(stage-1,true); });
+  document.getElementById('btnNext').addEventListener('click',function(){ setStage(stage+1,true); });
+  window.addEventListener('resize',function(){ layout(); });
+
+  initSprites(); layout(); setStage(0,false);
+  if(reduce){ document.getElementById('btnPlay').textContent='avvia'; blend=0; for(var z=0;z<400;z++) update(16); }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
