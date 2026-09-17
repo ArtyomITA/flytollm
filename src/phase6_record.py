@@ -108,6 +108,49 @@ RUNS = {
     'phase8_H2_arousal_pulse_2000': ('### H2a ', 4.275, 'default candidato 2000 4,275'),
     'phase8_H3_arousal_smooth_2000': ('### H2a ', 4.275, 'default candidato 2000 4,275'),
     'phase8_H4_homeo_T12_2000': ('### H1o ', 4.162, '12+12 costante (L5) 4,162'),
+    # phase 8c (SUITE section O)
+    'phase8_L8_best_T12_2000': ('### L8 ', 4.152, 'K5 (8+8 con tutte le leve) 4,152'),
+    'phase8_H5_arousal_smooth_T12_2000': ('### H5 ', 4.162, '12+12 costante (L5) 4,162'),
+    'phase8_H6_wake_learn_T8_2000': ('### H6 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_H7_wake_learn_T12_2000': ('### H6 ', 4.162, '12+12 costante (L5) 4,162'),
+    'phase8_L9_T8_8000': ('### L9 ', 3.541, 'default candidato 4+4 a 8000 (K8) 3,541'),
+    'phase8_L10_T12_8000': ('### L9 ', 3.541, 'default candidato 4+4 a 8000 (K8) 3,541'),
+    'phase8_C17_soft_corelr_T8_8000': ('### C17 ', 3.541, 'default candidato 4+4 a 8000 (K8) 3,541; riferimento vero = L9 quando esiste'),
+    'phase8_C18_wake_learn_T12_8000': ('### C17 ', 3.541, 'default candidato 4+4 a 8000 (K8) 3,541; riferimento vero = L10 quando esiste'),
+    # phase 8b2: the remaining 8b runs at 8+8 (user decision of 18 September 2026)
+    'phase8_C14_core_lr1e2_T8_2000': ('### C14 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_C16_soft_gw_T8_2000': ('### C16 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_C16_soft_gw_corelr1e3_T8_2000': ('### C16 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_C16_soft_gw_corelr1e2_T8_2000': ('### C16 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_H1_homeo_T8_2000': ('### H1o ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_H2_arousal_pulse_T8_2000': ('### H2a ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_H3_arousal_smooth_T8_2000': ('### H2a ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_N1_reads2_T8_2000': ('### N1 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_N2_every_T8_2000': ('### N2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_N5_inject_first_T8_2000': ('### N5 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_M4_cond_ports_T8_2000': ('### M4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_A272_gain_group_T8_2000': ('### A2.7.2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B253a_identity_T8_2000': ('### B2.5.3a ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B10_reservoir_T8_2000': ('### B10 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_N4_reads2_noid_T8_2000': ('### N4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_N3_every_firstkv_T8_2000': ('### N3 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B8_ports_seed23_T8_2000': ('### B8 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B9a_ports2639_T8_2000': ('### B9 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B9b_ports1733_T8_2000': ('### B9 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B252a_real_on_T8_2000': ('### B2.5.2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B252b_real_off_T8_2000': ('### B2.5.2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B252c_rewired_on_T8_2000': ('### B2.5.2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_B252d_rewired_off_T8_2000': ('### B2.5.2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    # phase 8d (SUITE section P): core-learning experiments
+    'phase8_E4_core_only_lr1e4_2000': ('### P1 ', 3.541, 'punto di partenza K8 3,541'),
+    'phase8_E4_core_only_lr1e2_2000': ('### P1 ', 3.541, 'punto di partenza K8 3,541'),
+    'phase8_E4_core_only_soft_lr1e2_2000': ('### P1 ', 3.541, 'punto di partenza K8 3,541'),
+    'phase8_E1_fluct_g1_T8_2000': ('### P2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_E1_fluct_g22_T8_2000': ('### P2 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_E3_slow_iface10_T8_2000': ('### P3 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_E3_slow_iface100_T8_2000': ('### P3 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_E2_outscale01_T8_2000': ('### P4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_E2_outscale001_T8_2000': ('### P4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
     'phase8_N1_reads2_2000': ('### N1 ', 4.275, 'default candidato 2000 4,275'),
     'phase8_N2_every_2000': ('### N2 ', 4.275, 'default candidato 2000 4,275'),
     'phase8_N3_every_firstkv_2000': ('### N3 ', 4.275, 'default candidato 2000 4,275'),
@@ -156,6 +199,14 @@ def block(name, data, ref, ref_label):
 
 def main():
     p = argparse.ArgumentParser(); p.add_argument('--force', action='store_true'); a = p.parse_args()
+    for reference, target, label in (('phase8_L9_T8_8000', 'phase8_C17_soft_corelr_T8_8000', 'default candidato + 8+8 a 8000 (L9)'),
+                                     ('phase8_L10_T12_8000', 'phase8_C18_wake_learn_T12_8000', 'default candidato + 12+12 a 8000 (L10)')):
+        path = ROOT / 'results' / f'{reference}.json'
+        if path.exists():
+            d = json.loads(path.read_text())
+            if d.get('ok') and d.get('result', {}).get('curve'):
+                ce = d['result']['curve'][-1]['dev']['ce']
+                RUNS[target] = ('### C17 ', ce, f'{label} {fmt(ce)}')
     micro = ROOT / 'results/phase8_micro_default_300.json'
     if micro.exists():
         d = json.loads(micro.read_text())

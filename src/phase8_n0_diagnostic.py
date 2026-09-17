@@ -71,7 +71,7 @@ def main():
                 elif r > pre:
                     post_sum = rate if post_sum is None else post_sum + rate
             final = interfaces.representation(vs, post_sum / post)
-            logits = torch.nn.functional.linear(final, interfaces.embedding.weight)
+            logits = torch.nn.functional.linear(final, model.head if hasattr(model, 'head') else interfaces.embedding.weight)
             valid = active & targets[t].ne(model.config.pad)
             if valid.any():
                 ce_sum += float(torch.nn.functional.cross_entropy(logits[valid], targets[t][valid], reduction='sum')); ce_n += int(valid.sum())

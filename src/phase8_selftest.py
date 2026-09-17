@@ -162,8 +162,40 @@ def check_homeo_arousal():
         assert max(levels) > 0 and min(levels) == 0
 
 
+def check_separate_head():
+    from phase3_variants import variant
+    ids = tokens(); targets = tokens(seed=2)
+    untied = variant(build(FlyLM), 'h1')
+    looped = build(LoopedFlyLM).add_separate_head()
+    with torch.no_grad():
+        untied.head.mul_(1.5); looped.load_state_dict(untied.state_dict())
+        torch.testing.assert_close(untied(ids)[0], looped(ids)[0], rtol=1e-5, atol=1e-6)
+    model = build(LoopedFlyLM, LoopConfig(reads=(2, 6), kv='per_read', step_id=True)).add_separate_head()
+    logits, _ = model(ids); loss, _ = model.loss(logits, targets, ids); loss.backward()
+    missing = [k for k, p in model.named_parameters() if p.grad is None]
+    assert not missing and model.head.grad.abs().sum() > 0, missing
+    print('7. separate output head: looped default == trainer Untied model; head trained in the looped variants: ok')
+
+
+def check_output_scale_and_freeze():
+    ids = tokens(); targets = tokens(seed=2)
+    base = build(LoopedFlyLM)
+    scaled = build(LoopedFlyLM, LoopConfig(reads=(4,), output_scale=0.1)); scaled.load_state_dict(base.state_dict())
+    with torch.no_grad():
+        torch.testing.assert_close(base(ids)[0] * 0.1, scaled(ids)[0], rtol=1e-5, atol=1e-6)
+    print('8. output scale 0.1 multiplies the logits: ok')
+    frozen = build(LoopedFlyLM).add_separate_head().freeze_interfaces_()
+    names = [n for n, _ in frozen.named_parameters()]
+    assert names == ['core.raw'], names
+    logits, _ = frozen(ids); loss, _ = frozen.loss(logits, targets, ids); loss.backward()
+    assert frozen.core.raw.grad is not None and torch.isfinite(frozen.core.raw.grad).all()
+    print('8b. freeze interfaces: only core.raw trainable, gradient finite: ok')
+
+
 if __name__ == '__main__':
     torch.manual_seed(0)
+    check_output_scale_and_freeze()
+    check_separate_head()
     check_homeo_arousal()
     check_depth_schedule()
     check_equivalence()

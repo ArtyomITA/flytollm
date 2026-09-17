@@ -20,7 +20,7 @@ def dev_ce(suite, record=None):
     original = model.core.advance
     if record is not None:
         def advance(current, steps=1, state=None, **kw):
-            out = original(current, steps, state, **kw); record += out[1].sum(0) * steps; return out
+            out = original(current, steps, state, **kw); record.add_(out[1].sum(0) * steps); return out
         model.core.advance = advance
     try:
         for x, y in suite.windows:

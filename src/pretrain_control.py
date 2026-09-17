@@ -126,7 +126,8 @@ def core_variant_arg(value):
 
 
 def build_control_cns(threshold, seed, kind='degree', ports='anatomical', readout='chunks', core_variant='lif', fast_mode='off', chunk=262144, index_dtype='int64',
-                      pre_steps=4, post_steps=4, weight_scale=1.0, loop=None, freeze_core=False, ports_seed=17, ports_count=None, homeo=None, arousal=None):
+                      pre_steps=4, post_steps=4, weight_scale=1.0, loop=None, freeze_core=False, ports_seed=17, ports_count=None, homeo=None, arousal=None,
+                      init_norm='sum'):
     import numpy as np, torch
     from fly_core import Core
     from fly_core_variants import parse_variant
@@ -136,11 +137,19 @@ def build_control_cns(threshold, seed, kind='degree', ports='anatomical', readou
     data, stats = load_control_graph(threshold, seed, kind)
     n = len(data['body_ids']); counts = np.log1p(data['weight'])
     incoming = np.bincount(data['dst'], weights=counts, minlength=n)
-    magnitude = (float(weight_scale) * .5 * counts / np.maximum(incoming[data['dst']], 1)).astype(np.float32)
+    if init_norm == 'fluct':
+        # E1 (phase 8, Rossbroich-Gygax-Zenke 2022): variance normalisation, weight_scale = target root-sum-square of the
+        # incoming weights (fluctuation-driven), instead of the sum normalised to 0.5 (mean-driven, quiescent)
+        incoming_sq = np.bincount(data['dst'], weights=counts ** 2, minlength=n)
+        magnitude = (float(weight_scale) * counts / np.sqrt(np.maximum(incoming_sq[data['dst']], 1e-12))).astype(np.float32)
+    else:
+        magnitude = (float(weight_scale) * .5 * counts / np.maximum(incoming[data['dst']], 1)).astype(np.float32)
     args = (torch.from_numpy(data['src']), torch.from_numpy(data['dst']), torch.from_numpy(magnitude), torch.from_numpy(data['sign']), n)
     extra = {}
     if weight_scale != 1.0:
         extra['weight_scale'] = float(weight_scale)
+    if init_norm != 'sum':
+        extra['init_norm'] = init_norm
     flags = parse_variant(core_variant)
     if fast_mode == 'fused':
         from fly_core_fast import _fused_kernels
@@ -238,6 +247,11 @@ def main():
     p.add_argument('--depth-schedule', default='', help="substeps per half changing during training, e.g. 0:12,500:8,1000:4,1500:12 (start_update:depth); needs --pre-steps = --post-steps = the maximum depth (phase 8, N6d)")
     p.add_argument('--homeo', default='', help='target,eta of the wake-up homeostasis (core flag homeo), e.g. 0.02,2e-5')
     p.add_argument('--arousal', default='', help='shape,amplitude,period_updates,duty_updates of the arousal schedule (core flag arousal), e.g. pulse,0.3,500,100 or smooth,0.3,500,0')
+    p.add_argument('--init-norm', choices=['sum', 'fluct'], default='sum', help='synaptic init: sum of incoming weights = 0.5 (main model) or fluctuation-driven, weight-scale = root-sum-square of the incoming weights (phase 8, E1)')
+    p.add_argument('--output-scale', type=float, default=1.0, help='logits multiplier (phase 8, E2: small values push training out of the lazy regime)')
+    p.add_argument('--interface-lr', type=float, default=None, help='Adam lr of the interface parameters (embedding, injectors, readout, head, norms) (phase 8, E3: slow interfaces)')
+    p.add_argument('--init-from', default=None, help='checkpoint (.pt) whose model weights initialise this run (same graph); optimizer fresh (phase 8, E4)')
+    p.add_argument('--freeze-interfaces', action='store_true', help='train only the core parameters; everything else frozen as buffers (phase 8, E4)')
     p.add_argument('--freeze-core', action='store_true', help='synaptic weights frozen at their initial values (reservoir / identity controls)')
     p.add_argument('--ports-seed', type=int, default=17, help='seed of the random ports (random_matched)')
     p.add_argument('--ports-count', type=int, default=None, help='number of random ports (random_matched); default = as many as the anatomical ports')
@@ -267,18 +281,41 @@ def main():
 
         def patched(threshold=10):
             loop = None
-            if a.attn_reads != 'default' or a.attn_kv != 'final' or a.attn_step_id or a.attn_inject != 'none' or a.token_injection != 'all' or a.depth_schedule:
+            if a.attn_reads != 'default' or a.attn_kv != 'final' or a.attn_step_id or a.attn_inject != 'none' or a.token_injection != 'all' or a.depth_schedule or a.output_scale != 1.0 or a.freeze_interfaces:
                 from fly_lm_variants import LoopConfig, parse_reads, parse_schedule
                 loop = LoopConfig(reads=parse_reads(a.attn_reads, a.pre_steps, a.post_steps), kv=a.attn_kv, step_id=a.attn_step_id,
-                                  inject=a.attn_inject, token_injection=a.token_injection, depth_schedule=parse_schedule(a.depth_schedule))
+                                  inject=a.attn_inject, token_injection=a.token_injection, depth_schedule=parse_schedule(a.depth_schedule), output_scale=a.output_scale)
             model, data, stats = build_control_cns(threshold, a.rewire_seed, a.rewire_kind, a.ports, a.readout, a.core_variant, a.fast_mode, a.chunk, a.index_dtype,
                                                    a.pre_steps, a.post_steps, a.weight_scale, loop=loop, freeze_core=a.freeze_core,
                                                    ports_seed=a.ports_seed, ports_count=a.ports_count,
+                                                   init_norm=a.init_norm,
                                                    homeo=tuple(float(x) for x in a.homeo.split(',')) if a.homeo else None,
                                                    arousal=(lambda f: (f[0], float(f[1]), float(f[2]), float(f[3])))(a.arousal.split(',')) if a.arousal else None)
             holder['data'] = data; holder['stats'] = stats; holder['model'] = model
             return model
         lm_io.build_cns = patched
+        import phase3_variants
+        original_variant = phase3_variants.variant
+
+        def variant_keeping_loop(model, name):
+            # 'h1' swaps model.__class__ to a FlyLM subclass with its own step(): a LoopedFlyLM must keep its step
+            if name == 'h1' and hasattr(model, 'add_separate_head'):
+                model = model.add_separate_head()
+            else:
+                model = original_variant(model, name)
+            if name == 'h1' and a.init_from:
+                saved = torch.load(a.init_from, map_location='cpu', weights_only=True)['model']['state_dict']
+                assert torch.equal(saved['core.src'].long(), model.core.src.cpu().long()) and torch.equal(saved['core.dst'].long(), model.core.dst.cpu().long()), 'init-from: different graph'
+                for key in ('core.src32', 'core.dst32'):
+                    saved.pop(key, None)
+                missing, unexpected = model.load_state_dict({k: v for k, v in saved.items()}, strict=False)
+                holder['stats']['init_from'] = dict(path=a.init_from, missing=[k for k in missing if not k.startswith('core.src') and not k.startswith('core.dst')][:20], unexpected=list(unexpected)[:20])
+                emit('init_from', path=a.init_from, missing=len(missing), unexpected=len(unexpected))
+            if name == 'h1' and a.freeze_interfaces:
+                model.freeze_interfaces_()
+                holder['stats']['freeze_interfaces'] = dict(trainable=[n for n, _ in model.named_parameters()])
+            return model
+        phase3_variants.variant = variant_keeping_loop
         if a.adam != 'default' or a.type_param_lr is not None or a.optimizer == 'muon' or a.core_lr is not None:
             original_adam = torch.optim.Adam
 
@@ -301,6 +338,16 @@ def main():
                         raise RuntimeError('type-param-lr given but the core has no per-type parameters')
                     holder['stats']['type_param_lr'] = dict(lr=float(a.type_param_lr), tensors=len(typed), values=int(sum(p.numel() for p in typed)))
                 groups = [(typed, float(a.type_param_lr))] if typed else []
+                if a.interface_lr is not None:
+                    # E3: every trainable parameter outside the core (and outside the Muon matrices, which keep --muon-lr) gets its own lr
+                    model_ = holder['model']
+                    core_ids = {id(p) for _, p in model_.core.named_parameters()}
+                    from optimizer_variants import matrix_names
+                    matrices = matrix_names(model_) if a.optimizer == 'muon' else set()
+                    named_ = {id(p): n for n, p in model_.named_parameters()}
+                    iface = [p for p in params if id(p) not in core_ids and named_.get(id(p)) not in matrices]
+                    groups.append((iface, float(a.interface_lr)))
+                    holder['stats']['interface_lr'] = dict(lr=float(a.interface_lr), tensors=len(iface))
                 if a.core_lr is not None:
                     raw = [p for p in params if p is holder['model'].core.raw]
                     if not raw:
@@ -345,7 +392,8 @@ def main():
                                    pre_steps=a.pre_steps, post_steps=a.post_steps, weight_scale=a.weight_scale, type_param_lr=a.type_param_lr,
                                    optimizer=a.optimizer, muon_lr=a.muon_lr if a.optimizer == 'muon' else None,
                                    attn_reads=a.attn_reads, attn_kv=a.attn_kv, attn_step_id=a.attn_step_id, attn_inject=a.attn_inject,
-                                   token_injection=a.token_injection, freeze_core=a.freeze_core, core_lr=a.core_lr, depth_schedule=a.depth_schedule, homeo=a.homeo, arousal=a.arousal, ports_seed=a.ports_seed, ports_count=a.ports_count,
+                                   token_injection=a.token_injection, freeze_core=a.freeze_core, core_lr=a.core_lr, depth_schedule=a.depth_schedule, homeo=a.homeo, arousal=a.arousal,
+                                   init_norm=a.init_norm, output_scale=a.output_scale, interface_lr=a.interface_lr, init_from=a.init_from, freeze_interfaces=a.freeze_interfaces, ports_seed=a.ports_seed, ports_count=a.ports_count,
                                    stats=holder['stats'],
                                    sources={f: hashlib.sha256((ROOT / f).read_bytes()).hexdigest() for f in CONTROL_SOURCES}),
                       semantic_verdict=f'control run: graph={a.rewire_kind}, ports={a.ports}, readout={a.readout}, core={a.core_variant}; same nodes and init; 2000-update test, not a model change')

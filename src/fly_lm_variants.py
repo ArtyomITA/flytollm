@@ -42,6 +42,7 @@ class LoopConfig:
     token_injection: str = 'all'
     depth_schedule: tuple = ()
     calls_per_update: int = 2
+    output_scale: float = 1.0
 
 
 def parameters_to_buffers_(module):
@@ -100,6 +101,24 @@ class LoopedFlyLM(FlyLM):
         v, s = self.core.initial_state(batch)
         return LMState(v, s, self.attention.empty(batch * self.rows))
 
+    def output_weight(self):
+        """Separate output head (variant 'h1', added by add_separate_head) when present, tied embedding otherwise."""
+        return self._parameters['head'] if 'head' in self._parameters else self.interfaces.embedding.weight
+
+    def add_separate_head(self):
+        self.head = nn.Parameter(self.interfaces.embedding.weight.detach().clone())
+        return self
+
+    def freeze_interfaces_(self):
+        """E4 (phase 8): every parameter outside the core (embedding, injectors, readout, attention, head, loop extras)
+        becomes a buffer; only the core's parameters remain trainable."""
+        parameters_to_buffers_(self.interfaces)
+        parameters_to_buffers_(self.attention)
+        for name in [n for n, p in list(self._parameters.items()) if p is not None]:
+            p = self._parameters.pop(name)
+            self.register_buffer(name, p.detach().clone())
+        return self
+
     @staticmethod
     def _row(cache, row, batch):
         return AttentionCache(*(x[row * batch:(row + 1) * batch] for x in cache))
@@ -132,7 +151,7 @@ class LoopedFlyLM(FlyLM):
             vs, rate = self.core.advance(drive, 1, vs, weights=w, active=active & gates[k])
             total = rate if total is None else total + rate
         final = self.interfaces.representation(vs, total / depth)
-        logits = F.linear(final, self.interfaces.embedding.weight)
+        logits = F.linear(final, self.output_weight()) * self.loop.output_scale
         logits = torch.where(active[:, None], logits, torch.zeros_like(logits))
         return logits, LMState(*vs, self.attention.append(final, cache, active))
 
@@ -182,7 +201,7 @@ class LoopedFlyLM(FlyLM):
                 feedback = self.interfaces.feedback_current(recalled)
                 provisionals.append(provisional)
         final = self.interfaces.representation(vs, sum_after / (self.total - self.after))
-        logits = F.linear(final, self.interfaces.embedding.weight)
+        logits = F.linear(final, self.output_weight()) * self.loop.output_scale
         logits = torch.where(active[:, None], logits, torch.zeros_like(logits))
         if self.reads:
             if l.kv == 'final':
