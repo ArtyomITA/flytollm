@@ -103,10 +103,13 @@
   .t-down .bp-dot,.t-down .bp-bar i{background:var(--bad);} .t-down .bp-tag,.t-down .bp-n{color:var(--bad);}
   .t-flat .bp-dot,.t-flat .bp-bar i{background:var(--ink-dim);} .t-flat .bp-tag{color:var(--ink-dim);}
   .t-info .bp-dot,.t-info .bp-bar i{background:var(--inh);} .t-info .bp-tag,.t-info .bp-n{color:var(--inh);}
+  .t-plan .bp-dot,.t-plan .bp-bar i{background:var(--mod);} .t-plan .bp-tag,.t-plan .bp-n{color:var(--mod);}
+  .t-plan .bp-dot{box-shadow:0 0 0 1px var(--mod) inset;background:transparent;}
   .legend{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-family:var(--f-mono);font-size:var(--step--1);color:var(--ink-faint);padding:10px 2px 0;}
   .legend .lg{display:inline-flex;align-items:center;gap:6px;}
   .legend i{width:8px;height:8px;border-radius:50%;background:var(--ink-faint);}
   .legend .t-up i{background:var(--good);} .legend .t-down i{background:var(--bad);} .legend .t-flat i{background:var(--ink-dim);} .legend .t-info i{background:var(--inh);}
+  .legend .t-plan i{background:transparent;box-shadow:0 0 0 1px var(--mod) inset;}
   @media (max-width:560px){ .stage-t{min-height:476px;} .ledger{padding:10px 13px 12px;grid-template-columns:minmax(0,1fr);} }
   @media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms !important;} }
 </style>
@@ -165,14 +168,14 @@
   <section class="tests" id="tests" aria-label="I test">
     <div class="sec-head">
       <h2>I test</h2>
-      <p>sei categorie · CE = cross-entropy in nat, più bassa è meglio · riferimento mosca reale 5,087 a 2000 update e 3,959 a 8000</p>
+      <p>nove categorie · CE = cross-entropy in nat, più bassa è meglio · riferimento mosca reale 5,087 a 2000 update e 3,959 a 8000 · aggiornato il 17 settembre 2026, sera</p>
     </div>
     <div class="rig rig-t">
       <div class="stage stage-t">
         <canvas id="cvT" aria-label="Animazione della categoria di test selezionata"></canvas>
         <div class="hud">
           <div class="hud-top">
-            <div class="hud-num" id="tNum">TEST 01 / 06</div>
+            <div class="hud-num" id="tNum">TEST 01 / 09</div>
             <h3 class="hud-title" id="tTitle">Null model sul grafo</h3>
             <p class="hud-desc" id="tDesc"></p>
           </div>
@@ -197,6 +200,7 @@
       <span class="lg t-down"><i></i>frena</span>
       <span class="lg t-flat"><i></i>nessun effetto</span>
       <span class="lg t-info"><i></i>misura</span>
+      <span class="lg t-plan"><i></i>da eseguire</span>
       <span>frecce ◀ ▶, tastiera o swipe per cambiare categoria</span>
     </div>
   </section>
@@ -266,14 +270,21 @@
       <table>
         <thead><tr><th>A pari dati · 8000 update</th><th>CE</th></tr></thead>
         <tbody>
-          <tr class="pick"><td>mosca, cablaggio reale</td><td>3,959</td></tr>
+          <tr><td>mosca, cablaggio reale</td><td>3,959</td></tr>
           <tr><td>mosca, cablaggio rimescolato</td><td>3,814</td></tr>
+          <tr><td>configuration model · tetto</td><td>3,648</td></tr>
+          <tr><td>configurazione standard</td><td>3,652</td></tr>
+          <tr><td>standard + conduttanza</td><td>3,624</td></tr>
+          <tr><td>standard + 8+8 sottopassi</td><td>3,592</td></tr>
+          <tr><td>standard + Muon 3e-4</td><td>3,571</td></tr>
+          <tr class="pick"><td>standard + Muon 1e-3</td><td>3,541</td></tr>
           <tr><td>GRU 2×256</td><td>3,429</td></tr>
-          <tr><td>Transformer 2 blocchi</td><td>3,563</td></tr>
+          <tr><td>Transformer 2 blocchi · Adam</td><td>3,563</td></tr>
           <tr><td>trigramma Kneser-Ney</td><td>3,410</td></tr>
         </tbody>
       </table>
       <p class="note" style="margin-top:12px">Il cablaggio anatomico oggi non aiuta: è un vincolo su un compito estraneo alla mosca. Il lobo ottico intero (89.403 neuroni) si può rimuovere senza cambiare la CE. Lo scopo non è la gara: è capire cosa fa il cervello quando lo si costringe a parlare.</p>
+      <p class="note" style="margin-top:10px">La configurazione standard con Muon a lr 1e-3 (3,541) è la candidata per il nuovo default: sta sotto il Transformer piccolo (3,563), che però è allenato con Adam. La GRU resta a 3,429.</p>
     </article>
 
   </section>
@@ -284,6 +295,7 @@
     <span>TinyStories · BPE 4096</span>
     <span>TBPTT 8 token · Adam 1e-4 · batch 2</span>
     <span>0,65 s per update</span>
+    <span>pagina aggiornata il 17 settembre 2026, sera</span>
   </footer>
 
 </div>
@@ -850,7 +862,7 @@
         {t:'Lesione del rich club', n:['+1,3','+1,5','+1,75'], d:'nat a 2000 / 8000 / 26.247 update, 10% dei nodi a grado massimo; controllo a pari grado ≈ 0', g:'up', dn:1.5},
         {t:'Lobo ottico, Kenyon cell, complesso centrale', n:['0'], d:'rimovibili a costo zero: il lobo ottico sono 89.403 neuroni', g:'flat'},
         {t:'Attention esterna', n:['0,07','0,24','0,46'], d:'nat a 2000 / 8000 / 26.247, tutta negli ultimi 8-32 token', g:'up', dn:0.24},
-        {t:'Raggio spettrale', n:['0,50'], d:'reale; rimescolato 0,19; porte random 0,73 → 0,35 col training', g:'info'},
+        {t:'Raggio spettrale · errata', n:['0,500'], d:'0,500 all’init per costruzione, perché i pesi entranti sono normalizzati a 0,5; 0,20-0,23 nei null; identico alla quarta cifra su tutti i checkpoint allenati; 0,405 sui soli neuroni attivi. Errata: i valori pubblicati prima erano fasi di un’iterazione di potenza che oscilla con periodo 2', g:'info'},
         {t:'Kenyon cell attive', n:['0,02%'], d:'nel reale, 11,7% con porte random', g:'info'}
       ]},
     { k:'reg', s:'Regioni specializzate', t:'Regioni specializzate: occhi, orecchie, corteggiamento',
@@ -868,16 +880,17 @@
         {t:'Regola della distanza', n:[], d:'la CE segue la distanza in sinapsi porte → lettura: 1,14 → 4,639; 1,62 → 5,087; 2,19 → 5,182; 3,39 → 5,339; 3,66 → 5,906', g:'info'}
       ]},
     { k:'lev', s:'Parametrizzazione', t:'Il connettoma come parametrizzazione',
-      d:"Le leve di modello: costanti di tempo, bias, conduttanze, sottopassi. Quali cambiano davvero la CE e quali sono falsi positivi che spariscono allungando il training.",
-      read:[['leva più forte','8+8 · +0,18'],['conduttanza','+0,12'],['tre leve insieme','−0,22']],
+      d:"Le leve di modello: costanti di tempo, bias, conduttanze, sottopassi. Quali cambiano davvero la CE e quali si assottigliano, o spariscono, allungando il training.",
+      read:[['8+8 · 2000 / 8000','+0,18 / +0,06'],['conduttanza · 2000 / 8000','+0,12 / +0,03'],['12+12 sul default','+0,11']],
       pts:[
         {t:'Lettura per gruppi anatomici', n:['+0,24','+0,015'], d:'a 2000 e a 8000: falso positivo', g:'flat', dn:0.015},
         {t:'Sparsità APL, lobo ottico graduato', n:[], d:'nessun effetto', g:'flat'},
-        {t:'Costanti di tempo per tipo', n:['11.752'], d:'tipi; 0 a lr 1e-4, +0,06 a lr 1e-3', g:'flat', dn:0.06},
-        {t:'Bias di riposo per tipo', n:['−0,46'], d:'instabile a lr 1e-3', g:'down', dn:0.46},
-        {t:'Sinapsi a conduttanza', n:['+0,04','+0,12'], d:'su porte anatomiche e sulla baseline standard; potenziali limitati a −1,3 invece di −6,3', g:'up', dn:0.12},
+        {t:'Costanti di tempo per tipo', n:['+0,06','+0,12','+0,17'], d:'11.752 tipi, un leak ciascuno: 0 a lr 1e-4, +0,06 a 1e-3, +0,12 a 3e-3, +0,17 a 1e-2; i leak imparati stanno fra 0,37 e 0,996', g:'up', dn:0.17},
+        {t:'Bias di riposo per tipo', n:['−0,46','+0,03'], d:'il −0,46 era fame di gradiente dal clip; riparametrizzato è neutro: scartato', g:'flat', dn:0.03},
+        {t:'Sinapsi a conduttanza', n:['+0,04','+0,12','+0,03'], d:'su porte anatomiche, sulla baseline standard e a 8000 update; potenziali limitati a −1,3 invece di −6,3', g:'up', dn:0.12},
         {t:'Scala dei pesi iniziali ×0,5', n:['+0,07'], d:'', g:'up', dn:0.07},
-        {t:'8+8 sottopassi per token', n:['+0,18'], d:'la leva più forte, costo ×1,8', g:'up', dn:0.18},
+        {t:'8+8 sottopassi per token', n:['+0,18','+0,06','+0,09'], d:'a 2000 update con Adam, ma solo +0,06 a 8000 e +0,09 sopra Muon 1e-3; costo ×1,8', g:'up', dn:0.18},
+        {t:'12+12 sottopassi per token', n:['+0,11','+0,025'], d:'sul default e sopra 8+8: la profondità satura; costo ×2,5, e a pari tempo GPU la profondità perde', g:'up', dn:0.11},
         {t:'Tre leve «tengo» insieme', n:['−0,22'], d:'interazione negativa', g:'down', dn:0.22}
       ]},
     { k:'vel', s:'Velocità', t:'Velocità, stessa matematica',
@@ -894,14 +907,53 @@
       ]},
     { k:'std', s:'Standard e stato', t:'Configurazione standard e stato',
       d:"Quello che gira oggi: grafo intero a soglia relativa, porte random, lettura dai discendenti, LIF, kernel fuso. A un soffio dal tetto della pipeline.",
-      read:[['standard a 2000','4,580'],['a 4000','3,999'],['dal tetto','0,013']],
+      read:[['standard a 2000','4,580'],['standard a 8000','3,652'],['con Muon 1e-3','3,541']],
       pts:[
         {t:'Configurazione standard', n:['4,580','3,999'], d:'grafo intero a soglia relativa + porte random + lettura discendenti + LIF + kernel fuso, a 2000 e 4000 update: a 0,013 dal tetto', g:'up', ce:4.58},
-        {t:'In corso', n:[], d:'Muon sulle matrici dense, 8+8 con conduttanza, promozioni a 8000', g:'info'},
-        {t:'Baseline a pari dati', n:['3,429','3,563','3,410'], d:'GRU, Transformer e trigramma a 8000: la mosca (3,959) resta sotto di 0,2-0,3', g:'info'}
+        {t:'Promozioni a 8000 update', n:['3,652','3,624','3,592'], d:'configurazione standard — pari al tetto del configuration model, 3,648 — poi con conduttanza e con 8+8 sottopassi', g:'info'},
+        {t:'Standard + Muon sulle matrici dense', n:['3,571','3,541'], d:'a lr 3e-4 e 1e-3: il 3,541 è il candidato per il nuovo default', g:'up', dn:0.11},
+        {t:'Baseline a pari dati', n:['3,429','3,563','3,410'], d:'GRU, Transformer (allenato con Adam) e trigramma a 8000: con Muon 1e-3 la mosca passa sotto il Transformer piccolo, la GRU resta avanti', g:'info'}
+      ]},
+    { k:'muon', s:'Ottimizzatore', t:'Ottimizzatore: Muon sulle matrici dense',
+      d:"Le matrici dense stanno fuori dal cervello: le proiezioni dell’attention e la lettura. Muon ortogonalizza il passo prima di applicarlo. Il grafo non cambia, cambia solo come si muovono le interfacce.",
+      read:[['parametri a Muon','301.568'],['costo','380 contro 365 ms'],['a 8000 · lr 1e-3','3,541']],
+      pts:[
+        {t:'Muon stile Moonlight, in FP32', n:['301.568'], d:'parametri delle matrici dense — attention q/k/v/o e proiezione di lettura — con Adam su tutto il resto; costo zero: 380 contro 365 ms per update', g:'info'},
+        {t:'Curva del passo a 2000 update', n:['4,648','4,411','4,276','4,250'], d:'lr 1e-4 (−0,07), 3e-4 (+0,17), 1e-3 (+0,30), 3e-3 (plateau), sulla configurazione standard che sta a 4,580', g:'up', dn:0.30},
+        {t:'Muon anche sulla testa di uscita', n:['−0,33'], d:'la testa resta su Adam', g:'down', dn:0.33},
+        {t:'A 8000 update', n:['3,571','3,541'], d:'lr 3e-4 (+0,08) e 1e-3 (+0,11): l’unica leva che resta sopra la soglia 0,10 a 8000 update', g:'up', dn:0.11},
+        {t:'Le leve di dinamica si assottigliano', n:['+0,06','+0,03'], d:'8+8 sottopassi da +0,16 a +0,06, sinapsi a conduttanza da +0,10 a +0,03', g:'info', dn:0.06},
+        {t:'Tutte le leve insieme a 2000', n:['4,152','4,173'], d:'replica con un altro seed a 4,173, rumore 0,02; ma è 3,5 volte più lenta: nello stesso tempo GPU il default semplice fa 7000 update e arriva a 3,615', g:'info', ce:4.152}
+      ]},
+    { k:'plast', s:'Quanto impara', t:'Quanto cervello impara',
+      d:"Quanto si spostano davvero i 2.753.975 pesi sinaptici rispetto all’init. Pochissimo: dopo 8000 update il nucleo è di fatto un reservoir fisso e l’apprendimento sta tutto nelle interfacce.",
+      read:[['pesi mossi a 8000','0,30%'],['archi oltre 1e-4','2,9%'],['neuroni muti','81%']],
+      pts:[
+        {t:'Variazione relativa dei pesi', n:['0,11%','0,21%','0,30%'], d:'a 1000, 4000 e 8000 update sui 2.753.975 pesi sinaptici; 0,26% con Muon, 0,32% con 8+8 sottopassi', g:'info'},
+        {t:'Archi che si spostano oltre 1e-4', n:['2,9%'], d:'tutto il resto resta dov’era all’init', g:'info'},
+        {t:'Il nucleo è un reservoir', n:[], d:'dopo 8000 update il cablaggio è praticamente fisso: quello che impara sono embedding, porte, lettura e attention', g:'info'},
+        {t:'Prima causa: serve uno spike', n:['81%'], d:'il gradiente di un peso arriva solo se il neurone a monte spara; l’81% è muto e solo il 19% degli archi parte da sorgenti attive', g:'info'},
+        {t:'Seconda causa: il passo è minuscolo', n:[], d:'il passo effettivo sui pesi vale circa lr × 0,03, perché la softplus lavora con pesi ≈ 0,03', g:'info'},
+        {t:'Stesso fenomeno sulle costanti di tempo', n:['+0,17'], d:'ferme a lr 1e-4, +0,17 a lr 1e-2: anche lì il problema è il passo, non la parametrizzazione', g:'info', dn:0.17},
+        {t:'Spiega due risultati già visti', n:[], d:'perché i pesi permutati non cambiavano nulla e perché porte e lettura contano più del cablaggio', g:'info'},
+        {t:'Conseguenza sui confronti', n:[], d:'i confronti reale contro null fatti finora confrontavano reservoir', g:'info'},
+        {t:'Raggiungibilità con segno', n:['85%'], d:'dalle porte random il segnale arriva all’85% dei neuroni di lettura in un salto; dagli occhi servono 2-3 salti e i segni si cancellano per strada', g:'info'},
+        {t:'Errata · raggio spettrale', n:['0,500'], d:'0,500 all’init per costruzione, 0,20-0,23 nei null, identico alla quarta cifra su tutti i checkpoint allenati, 0,405 sui soli neuroni attivi: i valori pubblicati prima erano fasi di un’iterazione di potenza che oscilla con periodo 2', g:'info'}
+      ]},
+    { k:'next', s:'In coda', t:'In coda: svegliare il cervello',
+      d:"Test pre-registrati, non ancora eseguiti: qui non ci sono risultati, solo protocollo. Il filo comune è alzare l’attività di un cervello che per l’81% resta muto.",
+      read:[['stato','pre-registrati'],['risultati','nessuno'],['tipi cellulari','11.752']],
+      pts:[
+        {t:'Micro-sweep del passo sinaptico', n:['300'], d:'run corti da 300 update, con un learning rate dedicato ai pesi da 1e-3 a 3e-2, e gradiente sia normale sia «allargato» ai presinaptici vicini alla soglia', g:'plan'},
+        {t:'Omeostasi di risveglio per tipo', n:['11.752','2%'], d:'ognuno degli 11.752 tipi cellulari abbassa da solo la propria soglia quando sta sotto il 2% di attività, senza gradiente', g:'plan'},
+        {t:'Impulsi di arousal', n:[], d:'eccitabilità globale modulata nel tempo, a impulsi o a onda: l’analogo dell’octopamina che alza il guadagno dei neuroni in volo', g:'plan'},
+        {t:'Shock di profondità', n:[], d:'12+12 → 8+8 → 4+4 → ritorno a 12+12 dentro un solo CUDA Graph', g:'plan'},
+        {t:'Attention dentro il giro del cervello', n:[], d:'logica dei looped transformer: letture ripetute con gli stessi pesi, una cache per lettura e un identificativo di passo', g:'plan'},
+        {t:'Controlli', n:[], d:'nucleo identità (archi spenti), reservoir (archi congelati) e fattoriale grafo reale/rimescolato × attention accesa/spenta', g:'plan'},
+        {t:'Piano completo', n:[], d:'<a href="https://github.com/ArtyomITA/flytollm/blob/main/reports/PIANO_TEST_RIMASTI.md">reports/PIANO_TEST_RIMASTI.md</a>', g:'plan'}
       ]}
   ];
-  var TAG={up:'aiuta',down:'frena',flat:'nessun effetto',info:'misura'};
+  var TAG={up:'aiuta',down:'frena',flat:'nessun effetto',info:'misura',plan:'da eseguire'};
 
   /* ── punti della lista: comparsa progressiva e numeri che salgono ── */
   var items=[], tweens=[], revealIdx=0, revealT=0, holdT=0;
@@ -1009,6 +1061,14 @@
         if(q.g<4){ q.bx=W*0.135+gauss()*W*0.028; q.by=ayF(SRCF[q.g])+gauss()*ry*0.14; }
         else if(q.g===4){ q.bx=W*0.875+gauss()*W*0.024; q.by=ayF(0.5)+gauss()*ry*0.28; }
         else { q.bx=W*0.505+Math.cos(a)*r*W*0.19; q.by=cy+Math.sin(a)*r*ry*0.80; }
+      } else if(k==='muon'){
+        /* il grafo resta una fascia bassa al centro: sopra le matrici dense, sotto le curve */
+        q.bx=W*0.5+Math.cos(a)*r*W*0.30; q.by=ayF(0.46)+Math.sin(a)*r*ry*0.78;
+      } else if(k==='plast'){
+        /* nucleo compatto: attorno restano le interfacce */
+        q.bx=W*0.5+Math.cos(a)*r*W*0.19; q.by=ayF(0.47)+Math.sin(a)*r*ry*0.30;
+      } else if(k==='next'){
+        q.bx=W*0.5+Math.cos(a)*r*W*0.32; q.by=ayF(0.46)+Math.sin(a)*r*ry*0.52;
       } else if(q.rc){ q.bx=W*0.52+Math.cos(a)*r*W*0.075; q.by=cy+Math.sin(a)*r*ry*0.32; }
       else if(q.ol){ q.bx=W*0.215+Math.cos(a)*r*W*0.095; q.by=cy+Math.sin(a)*r*ry*0.62; }
       else { q.bx=W*0.545+Math.cos(a)*r*W*0.315; q.by=cy+Math.sin(a)*r*ry*0.95; }
@@ -1082,7 +1142,8 @@
     ctx.strokeStyle=hexA(C.line,1); ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+w,y); ctx.stroke();
     ctx.font='8px "IBM Plex Mono",monospace'; ctx.textBaseline='middle';
-    ctx.textAlign='left'; ctx.fillStyle=hexA(C.faint,1); ctx.fillText(cap,x,y-16);
+    /* su schermo stretto la didascalia sale, così non finisce sotto le etichette delle tacche */
+    ctx.textAlign='left'; ctx.fillStyle=hexA(C.faint,1); ctx.fillText(cap,x,y-(narrow?30:16));
     for(var i=0;i<marks.length;i++){
       var m=marks[i], px=x+clamp((m.v-lo)/(hi-lo),0,1)*w, up=i%2===0;
       ctx.strokeStyle=hexA(m.c,.9); ctx.lineWidth=m.big?1.8:1;
@@ -1244,7 +1305,7 @@
     ctx.font='9px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle=hexA(C.dim,.9); ctx.fillText('sottopassi per token',W*0.5,y+20);
     ctx.font='600 11px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.exc,.95);
-    ctx.fillText(grow>0.5?'T = 8 + 8  ·  +0,18 nat  ·  costo ×1,8':'T = 4 + 4  ·  standard',W*0.5,y+38);
+    ctx.fillText(grow>0.5?'T = 8 + 8  ·  +0,18 a 2000, +0,06 a 8000  ·  costo ×1,8':'T = 4 + 4  ·  standard',W*0.5,y+38);
     /* potenziale: senza e con sinapsi a conduttanza */
     var gx=W*0.5-Math.min(W*0.40,220), gw=Math.min(W*0.80,440), gy=ayF(0.58), gh=Math.max(44,(ayF(1)-gy)*0.94);
     ctx.strokeStyle=hexA(C.line,1); ctx.lineWidth=1; ctx.strokeRect(gx,gy,gw,gh);
@@ -1323,14 +1384,207 @@
       {v:4.533,l:'tetto 4,533',c:C.inh,big:true},
       {v:cur1,l:'standard '+(slide>0.985?'4,580':cur1.toFixed(3).replace('.',',')),c:C.exc,big:true}
     ],'A 2000 UPDATE · CROSS-ENTROPY · NAT');
-    ceAxis(x,ayF(0.72),w,3.35,4.05,[
-      {v:3.959,l:'mosca 3,959',c:C.exc,big:true},
-      {v:3.410,l:'trigramma 3,410',c:C.faint,big:false},
-      {v:3.429,l:'GRU 3,429',c:C.dim,big:false},
-      {v:3.563,l:'Transformer 3,563',c:C.dim,big:true}
-    ],'A 8000 UPDATE, PARI DATI · CROSS-ENTROPY · NAT');
-    label('STANDARD · 4,580 A 2000 · 3,999 A 4000 · A 0,013 DAL TETTO',hexA(C.exc,.95));
+    /* su schermo stretto restano le tre tacche che servono: le altre stanno nella lista */
+    var mk8 = narrow
+      ? [{v:3.959,l:'mosca 3,959',c:C.exc,big:true},
+         {v:3.563,l:'Transformer 3,563',c:C.dim,big:true},
+         {v:3.541,l:'Muon 3,541',c:C.good,big:true}]
+      : [{v:3.959,l:'mosca 3,959',c:C.exc,big:true},
+         {v:3.410,l:'trigramma 3,410',c:C.faint,big:false},
+         {v:3.429,l:'GRU 3,429',c:C.dim,big:false},
+         {v:3.563,l:'Transformer 3,563',c:C.dim,big:true},
+         {v:3.541,l:'Muon 3,541',c:C.good,big:true}];
+    ceAxis(x,ayF(0.72),w,3.35,4.05,mk8,'A 8000 UPDATE, PARI DATI · CROSS-ENTROPY · NAT');
+    label('STANDARD · 4,580 A 2000 · 3,652 A 8000 · 3,541 CON MUON 1e-3',hexA(C.exc,.95));
     sub('grafo intero a soglia relativa · porte random · lettura discendenti · LIF · kernel fuso');
+  }
+
+  /* 7 · Muon: le matrici dense ricevono passi ortogonalizzati, il grafo resta com'è */
+  var MUONLR=[['lr 1e-4','4,648','−0,07',4.648,'bad'],['lr 3e-4','4,411','+0,17',4.411,'good'],
+              ['lr 1e-3','4,276','+0,30',4.276,'good'],['lr 3e-3','4,250','plateau',4.250,'dim']];
+  var MMAT=['q','k','v','o','lettura'];
+  function sMuon(dt){
+    var per=2400, ph=slideT%per, ci=reduce?2:Math.floor(slideT/per)%MUONLR.length, m=MUONLR[ci];
+    /* con prefers-reduced-motion la slide resta ferma sul fotogramma finale */
+    var al=reduce?1:sstep(900,2600,slideT), prog=reduce?1:clamp((ph-350)/1500,0,1);
+    var col=m[4]==='good'?C.good:(m[4]==='bad'?C.bad:C.dim);
+    var i,j,k,e;
+    /* il grafo, invariato, sullo sfondo */
+    edges(0,null);
+    fireT+=dt;
+    if(fireT>240){ fireT=0; for(i=0;i<5;i++){ e=LINKS[(Math.random()*LINKS.length)|0]; if(e) SPK.push({a:e.a,b:e.b,t:0,sp:0.8}); } }
+    spikes(dt,0);
+    nodes(function(q){ return 0.20+q.act*0.7; },0.95);
+    /* le cinque matrici dense: i passi partono storti e si allineano */
+    var bs=narrow?22:28, gap=narrow?8:14, nM=MMAT.length;
+    var yM=ayF(0.09), x0=W*0.5-(nM*bs+(nM-1)*gap)/2;
+    for(k=0;k<nM;k++){
+      var bx=x0+k*(bs+gap), byT=yM-bs/2;
+      ctx.fillStyle=hexA(C.exc,0.04+0.10*al); ctx.fillRect(bx,byT,bs,bs);
+      ctx.strokeStyle=al>0.05?hexA(C.exc,.25+0.5*al):hexA(C.line,1); ctx.lineWidth=1; ctx.strokeRect(bx,byT,bs,bs);
+      for(j=0;j<2;j++){
+        var base=k*1.7+j*2.4, fin=j===0?0:Math.PI/2;
+        var ang=base+(fin-base)*al+(1-al)*Math.sin(T*0.0035+base)*0.8;
+        var mx2=bx+bs/2, my2=yM, L=bs*0.32, ex=mx2+Math.cos(ang)*L, ey=my2+Math.sin(ang)*L;
+        ctx.strokeStyle=hexA(j===0?C.exc:C.inh,.4+0.5*al); ctx.lineWidth=1.3;
+        ctx.beginPath(); ctx.moveTo(mx2-Math.cos(ang)*L,my2-Math.sin(ang)*L); ctx.lineTo(ex,ey); ctx.stroke();
+        ctx.beginPath(); ctx.arc(ex,ey,1.7,0,Math.PI*2); ctx.fillStyle=hexA(j===0?C.exc:C.inh,.85); ctx.fill();
+      }
+      ctx.font=(narrow?7:8)+'px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillStyle=hexA(C.dim,.85); ctx.fillText(MMAT[k],bx+bs/2,yM+bs/2+4);
+    }
+    ctx.font=(narrow?8:9)+'px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=al>0.5?hexA(C.exc,.95):hexA(C.dim,.9);
+    ctx.fillText(al>0.5?'passo ortogonalizzato · 301.568 parametri · costo 380 contro 365 ms':'matrici dense · attention q/k/v/o e proiezione di lettura',W*0.5,yM+bs/2+19);
+    /* le due curve: Adam sotto, Muon che scende più in fretta */
+    var gx2=W*0.5-Math.min(W*0.40,215), gw2=Math.min(W*0.80,430);
+    var gy2=ayF(0.52), gh2=Math.max(46,ayF(0.99)-ayF(0.52));
+    var lo=4.20, hi=4.95;
+    var yFor=function(v){ return gy2+3+(hi-clamp(v,lo,hi))/(hi-lo)*(gh2-6); };
+    ctx.strokeStyle=hexA(C.line,1); ctx.lineWidth=1; ctx.strokeRect(gx2,gy2,gw2,gh2);
+    ctx.beginPath();
+    for(i=0;i<=64;i++){
+      var u=i/64; if(u>prog+0.002) break;
+      var vA=4.580+(hi-4.580)*Math.exp(-u*2.4);
+      if(i===0) ctx.moveTo(gx2,yFor(vA)); else ctx.lineTo(gx2+u*gw2,yFor(vA));
+    }
+    ctx.strokeStyle=hexA(C.faint,.95); ctx.lineWidth=1; ctx.stroke();
+    var vM=hi;
+    ctx.beginPath();
+    for(i=0;i<=64;i++){
+      var u2=i/64; if(u2>prog+0.002) break;
+      vM=m[3]+(hi-m[3])*Math.exp(-u2*3.1);
+      if(i===0) ctx.moveTo(gx2,yFor(vM)); else ctx.lineTo(gx2+u2*gw2,yFor(vM));
+    }
+    ctx.strokeStyle=hexA(col,.95); ctx.lineWidth=1.6; ctx.stroke();
+    ctx.beginPath(); ctx.arc(gx2+prog*gw2,yFor(vM),2.6,0,Math.PI*2); ctx.fillStyle=hexA(col,.95); ctx.fill();
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(gx2,yFor(4.580)); ctx.lineTo(gx2+gw2,yFor(4.580));
+    ctx.strokeStyle=hexA(C.faint,.5); ctx.lineWidth=1; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='8px "IBM Plex Mono",monospace'; ctx.textAlign='left'; ctx.textBaseline='bottom';
+    ctx.fillStyle=hexA(C.faint,1); ctx.fillText('CROSS-ENTROPY A 2000 UPDATE · NAT',gx2,gy2-4);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('standard 4,580',gx2+gw2-4,yFor(4.580)-8);
+    if(prog>0.72){
+      ctx.font='600 9px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(col,.95);
+      ctx.fillText(m[0]+' · '+m[1],gx2+gw2-4,yFor(m[3])+(m[3]>4.58?-15:13));
+    }
+    label('MUON SULLE MATRICI DENSE · '+m[0].toUpperCase()+' · CE '+m[1],hexA(col,.95));
+    sub(m[2]==='plateau'
+      ? 'oltre 1e-3 non si guadagna più · a 8000: 3,541 con 1e-3'
+      : m[2]+' sulla standard 4,580 · a 8000: 3,571 e 3,541');
+  }
+
+  /* 8 · quanto impara: il nucleo resta fermo, le interfacce si muovono */
+  var IFACE=[['embedding',0.34,-1],['porte',0.58,-1],['lettura',0.34,1],['attention',0.58,1]];
+  function sPlast(dt){
+    var per=11000, ph=slideT%per, prog=reduce?1:clamp((ph-900)/6400,0,1);
+    var pct=prog*0.30, i,e,A,B,mov,alp;
+    /* archi: quasi tutti fermi all'init, il 2,9% si muove */
+    for(i=0;i<LINKS.length;i++){
+      e=LINKS[i]; A=Q[e.a]; B=Q[e.b]; mov=(i%34===0);
+      alp=mov?0.12+0.45*prog*(0.55+0.45*Math.sin(T*0.005+i)):0.05;
+      ctx.strokeStyle=mov?hexA(C.exc,alp):hexA(C.inh,alp);
+      ctx.lineWidth=mov?0.8+1.5*prog:0.6;
+      ctx.beginPath(); ctx.moveTo(A.bx,A.by); ctx.quadraticCurveTo((A.bx+B.bx)/2,(A.by+B.by)/2-22,B.bx,B.by); ctx.stroke();
+    }
+    ctx.lineWidth=1;
+    nodes(function(q){ return (q.silent?0.13:0.32)+q.act*0.6; },0.95);
+    /* il nucleo: una scatola che non si muove */
+    var hw=Math.min(W*0.26,190), y0=ayF(0.30), y1=ayF(0.64);
+    ctx.setLineDash([4,4]); ctx.strokeStyle=hexA(C.faint,.85); ctx.lineWidth=1;
+    ctx.strokeRect(W*0.5-hw,y0,hw*2,y1-y0); ctx.setLineDash([]);
+    /* le interfacce, che invece pulsano */
+    var k,pul,ix,iy;
+    for(k=0;k<IFACE.length;k++){
+      pul=0.35+0.65*Math.abs(Math.sin(T*0.0022+k*1.25));
+      ix=W*0.5+IFACE[k][2]*(hw+Math.min(W*0.13,86)); iy=ayF(IFACE[k][1]);
+      ctx.strokeStyle=hexA(C.mod,.35+0.45*pul); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(ix,iy);
+      ctx.quadraticCurveTo((ix+W*0.5)/2,iy-14,W*0.5+IFACE[k][2]*hw,iy); ctx.stroke();
+      ctx.fillStyle=hexA(C.mod,.12+0.5*pul); ctx.fillRect(ix-11,iy-6,22,12);
+      ctx.strokeStyle=hexA(C.mod,.5+0.45*pul); ctx.strokeRect(ix-11,iy-6,22,12);
+      ctx.font=(narrow?7:8)+'px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillStyle=hexA(C.mod,.9); ctx.fillText(IFACE[k][0],ix,iy+9);
+    }
+    ctx.font=(narrow?7:8)+'px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=hexA(C.faint,1); ctx.fillText('nucleo · 2.753.975 pesi sinaptici',W*0.5,y0-9);
+    /* il contatore */
+    ctx.font='600 '+(narrow?11:13)+'px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.exc,.95);
+    ctx.fillText('PESI MOSSI DALL’INIT · '+pct.toFixed(2).replace('.',',')+'%',W*0.5,ayF(0.05));
+    ctx.font=(narrow?8:9)+'px "IBM Plex Mono",monospace'; ctx.fillStyle=hexA(C.dim,.9);
+    ctx.fillText('a '+fmt(Math.round(prog*8000/100)*100,0)+' update · 0,11% a 1000 · 0,21% a 4000 · 0,30% a 8000',W*0.5,ayF(0.15));
+    /* quota di archi che si muove davvero */
+    var barW=Math.min(W*0.62,360), bx0=W*0.5-barW/2, byB=ayF(0.86);
+    ctx.fillStyle=hexA(C.line,1); ctx.fillRect(bx0,byB,barW,4);
+    ctx.fillStyle=hexA(C.exc,.95); ctx.fillRect(bx0,byB,barW*0.029*prog,4);
+    ctx.font='8px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillStyle=hexA(C.faint,1); ctx.fillText('archi che si spostano più di 1e-4 · 2,9%',W*0.5,byB-5);
+    label('IL NUCLEO È UN RESERVOIR · SI IMPARA NELLE INTERFACCE',hexA(C.mod,.95));
+    sub('81% dei neuroni muto · passo effettivo sui pesi ≈ lr × 0,03');
+  }
+
+  /* 9 · in coda: test pre-registrati, non ancora eseguiti */
+  var DEPTH=[12,8,4,12];
+  function sNext(dt){
+    var per=9000, ph=slideT%per, phase=ph<3000?0:(ph<6000?1:2), i,e;
+    edges(0,null);
+    if(phase===0){
+      /* onda di eccitabilità che attraversa il grafo e accende i muti */
+      var wx=W*(-0.08+1.16*((ph%2500)/2500));
+      for(i=0;i<NT;i++){ if(Math.abs(Q[i].bx-wx)<W*0.055 && Math.random()<0.20) Q[i].act=Math.min(1,Q[i].act+0.95); }
+      var gw=ctx.createLinearGradient(wx-W*0.05,0,wx+W*0.05,0);
+      gw.addColorStop(0,'rgba(192,140,255,0)'); gw.addColorStop(0.5,'rgba(192,140,255,0.20)'); gw.addColorStop(1,'rgba(192,140,255,0)');
+      ctx.fillStyle=gw; ctx.fillRect(wx-W*0.05,ayF(0.02),W*0.10,ayF(0.98)-ayF(0.02));
+    }
+    fireT+=dt;
+    if(fireT>220){ fireT=0; for(i=0;i<5;i++){ e=LINKS[(Math.random()*LINKS.length)|0]; if(e) SPK.push({a:e.a,b:e.b,t:0,sp:0.85}); } }
+    spikes(dt,0);
+    nodes(function(q){ return (q.silent?0.12:0.34)+q.act*0.9; },0.95);
+    ctx.font='600 '+(narrow?9:10)+'px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=hexA(C.mod,.95);
+    ctx.fillText('PRE-REGISTRATI · NON ANCORA ESEGUITI · NESSUN RISULTATO',W*0.5,ayF(0.05));
+    if(phase===1){
+      /* omeostasi: ogni tipo abbassa da solo la propria soglia */
+      var t1=clamp((ph-3200)/2200,0,1), nb=narrow?12:18;
+      var bw=narrow?8:11, gp=narrow?5:7, tot=nb*(bw+gp)-gp, x1=W*0.5-tot/2+bw/2;
+      var top=ayF(0.60), bot=ayF(0.84), px;
+      for(i=0;i<nb;i++){
+        px=x1+i*(bw+gp);
+        ctx.strokeStyle=hexA(C.line,1); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(px,top); ctx.lineTo(px,bot); ctx.stroke();
+        var frac=0.3+0.7*(((i*7)%nb)/nb);
+        ctx.fillStyle=hexA(C.mod,.85);
+        ctx.fillRect(px-bw/2,top+(bot-top)*t1*frac*0.62,bw,2.5);
+      }
+      ctx.font=(narrow?7:8)+'px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillStyle=hexA(C.faint,1); ctx.fillText('soglia per tipo cellulare · 11.752 tipi',W*0.5,bot+6);
+    }
+    if(phase===2){
+      /* respiro di profondità: 12 → 8 → 4 → 12 */
+      var seg=clamp(Math.floor((ph-6000)/750),0,3), dep=DEPTH[seg];
+      var bw2=narrow?7:10, gp2=narrow?3:4, y2=ayF(0.72), nb2=dep*2, bxk;
+      var x2=W*0.5-(nb2*(bw2+gp2)-gp2+10)/2;
+      for(i=0;i<nb2;i++){
+        bxk=x2+i*(bw2+gp2)+(i>=dep?10:0);
+        ctx.fillStyle=hexA(C.exc,.25+0.45*Math.abs(Math.sin(T*0.004+i*0.4)));
+        ctx.fillRect(bxk,y2-8,bw2,16);
+        ctx.strokeStyle=hexA(C.exc,.55); ctx.lineWidth=1; ctx.strokeRect(bxk,y2-8,bw2,16);
+      }
+      ctx.font=(narrow?8:9)+'px "IBM Plex Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillStyle=hexA(C.exc,.95); ctx.fillText('T = '+dep+' + '+dep+' sottopassi',W*0.5,y2+14);
+    }
+    if(phase===0){
+      label('IMPULSI DI AROUSAL · ECCITABILITÀ GLOBALE MODULATA',hexA(C.mod,.95));
+      sub('a impulsi o a onda · come l’octopamina nei neuroni in volo');
+    } else if(phase===1){
+      label('OMEOSTASI DI RISVEGLIO PER TIPO CELLULARE',hexA(C.mod,.95));
+      sub('sotto il 2% di attività il tipo abbassa da solo la soglia');
+    } else {
+      label('SHOCK DI PROFONDITÀ · 12+12 → 8+8 → 4+4 → 12+12',hexA(C.mod,.95));
+      sub('un solo CUDA Graph · e micro-sweep del passo sinaptico');
+    }
   }
 
   /* ── ciclo, navigazione, stato ── */
@@ -1356,7 +1610,8 @@
     backdrop();
     var k=TESTS[cur].k;
     if(k==='null') sNull(dt); else if(k==='les') sLes(dt); else if(k==='reg') sReg(dt);
-    else if(k==='lev') sLev(dt); else if(k==='vel') sVel(dt); else sStat(dt);
+    else if(k==='lev') sLev(dt); else if(k==='vel') sVel(dt); else if(k==='std') sStat(dt);
+    else if(k==='muon') sMuon(dt); else if(k==='plast') sPlast(dt); else sNext(dt);
   }
   function frame(ts){
     var dt=Math.min(50,ts-last||16); last=ts; T+=dt;
