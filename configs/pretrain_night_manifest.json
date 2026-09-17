@@ -1,0 +1,135 @@
+{
+  "trainer_fingerprints": {
+    "pretrain_resumable.py": "2b9cb42089e44e0771bfd54640e4c311f38e24e128c336900e25a1944b501115",
+    "phase3_t45.py": "821a65bff61eb3223b62910386bb9e5653d6187ebd5f9a592076c2e585f6bb4d",
+    "phase3_variants.py": "46aaba29454e16c11048eb714f1979b410323e9e0074cd70d45324da1dab9be4",
+    "fly_core.py": "9f7cf24738877671c76ec903f7e202f6176d2755e2b1f0374f00f356925ec735",
+    "fly_interfaces.py": "2967f8d3d0c8556fdb116aa0c00969dac35faae29ebc709f29620cac2f8d13b3",
+    "fly_attention.py": "d755224a706a294bdf41d0bd1dbf0af9638c64c728e63e6a2f9b2b5ebd9c779b",
+    "fly_lm.py": "5f5d61b5f0fe7e39b4e0908124c6ddb97a84ce14ff6b38aae16222c23c852431",
+    "lm_io.py": "cb0d2504cb180e55d486f139dca7940fdee1029e1a112ceba4e3503a594ed843",
+    "text_dataset.py": "5688ea0ac032da5de4812330c40240f6db18747b994fa01d3b7503fd28d20172",
+    "phase3_extended.py": "e7e751e6758b2fa94c67a333673f80e462dbf9b1e0b5fa112e84dbbecd036e6f",
+    "dataset/prepared_v1/manifest.json": "18e70fa12903d3198ca13189e5ab49f4391fb01d541538b5d2e1de64448159ac",
+    "dataset/prepared_v1/tokenizer-4096.json": "440c5b700f3ab487bf1e05727cc11ad984fb8697f101a7641f775d2028defc13",
+    "configs/phase3_protocol_v1.json": "7d8f6a7a46860ba70a8baf42776bbe88ed65cdef748f0f574826f7420c308580"
+  },
+  "suite_sources": {
+    "pretrain_night_queue.py": "a0aa53db1cfc93fa4f71226ebf32baf3381f2b1559a321b1379510a54cc485a5",
+    "phase35_completion_queue.py": "21f29f7fde87818a632d206fa58b9a16e3065d6f77b27a57232c539470fe1840",
+    "graph_specialization_probe.py": "019945988fa782e3e6acf06c901eaab673ff4cf1c3d1e4cd711fb03741c5910b",
+    "analyze_graph_specialization.py": "1bc58aa254d14a8d808510edef80c92b71cc53bc603e8625ac145df843de6a5b",
+    "anatomy_fanout_tests.py": "5b2f2be02efe7144bfaa24ec62efb93a6b7a66053710daa221e86fc1a767ec42",
+    "phase35_final_audit.py": "33a5a6e0669e7420da70a71f62008cfc0973aeb52a6f738aae9bd71e913d741e",
+    "verify_resume_after_probe.py": "1c1d2be97428a6d76524848e66cde5f03da4136ca37bf253300fdf6eab205023",
+    "verify_trained_resumes.py": "dcb79c17c44af70b929e5a5bce60cab8f8467ee63fc5d02f8597d66803e184a5",
+    "test_night_orchestration.py": "3dfe9f240b82aca30a7f4bf41d51fdd2b25bbeddd3b94e5278e27d121d735702"
+  },
+  "gpu_smokes": {
+    "pretrain_smoke_t10": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "7853163655c46f0b669d8f9fc37f6a1bc593834ba8bc76be191fe48484113a79"
+    },
+    "pretrain_resume_smoke_t10": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "234c03819a17417dabfeebd8aec39f0ad056eb4f3bfc07deaf1fc97b592af1ed"
+    },
+    "pretrain_smoke_h5": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "a0707089beee9cdf1f34ecd9de5538ac0ddfed656c4be22517b6e370075333d3"
+    },
+    "pretrain_resume_smoke_h5": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "e05a9658e263ce5d9b1f8005035029df9a89c7337719e26c6c8ea8598ecf3884"
+    },
+    "resume_after_suite_smoke": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "4a38da793363ca3b5d2312b87885438634266085c2cfba1758c66e65d9d8dfc0"
+    },
+    "phase35_audit_harness_smoke": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "26a5f6b0e9f37883269aecd0bdd3a4d8a6251a2b1bfc0e8517c9bcfc544ccc54"
+    },
+    "resume_candidate_t10_smoke": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "24df82c796f255a20e2737da76a34d2a5b6944700d6c72f4b6d536de6ce503ae"
+    },
+    "resume_candidate_h10_smoke": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "195ce0cf6038a324759b2b32d0034e55a86e99f729eae92f1bb1ae8c5f400091"
+    },
+    "resume_candidate_h5_smoke": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "20a11c977e885e9feb7e8e93a06d12515a9b9089922a94c16aa851721e7f3702"
+    },
+    "graph_suite_smoke_h5_anatomical_train": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "1c3fa582833d2f33055dc23ef3de2c1941cdcce9ee6b385e73e40f2ef6813ac1"
+    },
+    "graph_suite_smoke_h5_anatomical_validation": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "b866d6893e993e98d803f8a0ecf7b8751a8a0ade0f05d1a44c9b05d87c13d3bf"
+    },
+    "graph_suite_smoke_h5_null_train": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "0ac361a9eb0a117a2ebe3020b812f24811edb00fe7a19a76c2fc94b509ccb5c4"
+    },
+    "graph_suite_smoke_h5_null_validation": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "32430ac609e8c1e4f9f0b22a7032c5782dba8db8af8ee0d9e38880144a646f34"
+    },
+    "graph_suite_smoke_h5_reset_validation": {
+      "ok": true,
+      "cleanup_mib": 0,
+      "sha256": "51216e1f4588f75fa65bb8fddd0592c54e77f72c9f594ce69d9e1bdf455cd335"
+    }
+  },
+  "cpu_control": {
+    "ok": true,
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "cpu_only": true
+  },
+  "smoke_analysis_ok": true,
+  "forced_probe_failure_smoke": true,
+  "checkpoint_every": 2000,
+  "pilot_updates": 2000,
+  "night_pair_updates": 8000,
+  "probe_at": [
+    8000,
+    20000
+  ],
+  "pause_at": 20000,
+  "after_pause": "resume_until_user_stop",
+  "selected": "h10",
+  "night_pair": [
+    "h10",
+    "h5"
+  ],
+  "audit_evaluated": true,
+  "test_evaluated": false,
+  "quality_criteria_all_passed": false,
+  "user_authorization": "Finish3.5+4, verify, then launch; no further confirmation needed",
+  "final_review_sha256": "734bae10975d1650483037704dbce130dcae99b755016c667da7c8608ee324e8",
+  "launch": {
+    "verified_utc": "2026-09-13T04:56:47.956692+00:00",
+    "launcher_pid": 27100,
+    "worker_pid": 20680,
+    "verified_update": 2192,
+    "state_file": "results/pretrain_actual_night_live.json"
+  }
+}

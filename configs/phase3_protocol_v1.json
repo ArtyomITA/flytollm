@@ -1,0 +1,48 @@
+{
+  "protocol": "PROTOCOLLO_FASE_3.md",
+  "train_story_indices": [
+    0,
+    1
+  ],
+  "train_target_offsets": [
+    1,
+    16
+  ],
+  "validation_reserved": [
+    17121,
+    3385,
+    14608,
+    3675,
+    14447,
+    9560,
+    6129,
+    13656,
+    4466,
+    4735,
+    13210,
+    6200,
+    15683,
+    19945,
+    8936,
+    21126
+  ],
+  "test_evaluated": false,
+  "seed": 89,
+  "batch": 2,
+  "window": 8,
+  "windows_per_epoch": 2,
+  "max_epochs": 200,
+  "learning_rates_in_order": [
+    0.0001,
+    0.001
+  ],
+  "success": {
+    "ce_ratio_max": 0.5,
+    "accuracy_min": 0.5
+  },
+  "hashes": {
+    "PROTOCOLLO_FASE_3.md": "b262d70cdc93c2909ac6d8a26dd8e96810b0c76b4cfb7d5f3f4be24798e32515",
+    "dataset\\prepared_v1\\manifest.json": "18e70fa12903d3198ca13189e5ab49f4391fb01d541538b5d2e1de64448159ac",
+    "dataset\\prepared_v1\\tokenizer-4096.json": "440c5b700f3ab487bf1e05727cc11ad984fb8697f101a7641f775d2028defc13"
+  }
+}

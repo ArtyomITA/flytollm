@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "status": "diagnostic validated; not pretraining configuration",
+  "specification": {
+    "lm": {
+      "pre_steps": 4,
+      "post_steps": 4,
+      "pad": 0,
+      "bos": 1,
+      "eos": 2
+    },
+    "interfaces": {
+      "vocab": 4096,
+      "dim": 256,
+      "fan_in": 8,
+      "pool_size": 32,
+      "seed": 17,
+      "input_gain": 0.6,
+      "input_bias": 0.6,
+      "feedback_gate": 0.1
+    },
+    "attention": {
+      "dim": 256,
+      "heads": 4,
+      "window": 128,
+      "rope_base": 10000.0,
+      "seed": 23
+    },
+    "neurons": 166700,
+    "edges": 2753975,
+    "parameters": 4410893,
+    "post_current": "token_plus_feedback"
+  },
+  "threshold": 10,
+  "device": "cuda",
+  "dtype": "float32",
+  "cuda_graph": true,
+  "cpu_model_offload": false,
+  "batch": 2,
+  "length": 4,
+  "updates": 6,
+  "seed": 89,
+  "optimizer": {
+    "name": "Adam",
+    "lr": 0.0001,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "weight_decay": 0,
+    "foreach": false,
+    "capturable": true
+  },
+  "activation_checkpoint": false,
+  "state_policy": "detach and carry after update; BOS resets",
+  "data": {
+    "split": "train",
+    "stories": [
+      0,
+      1
+    ],
+    "starts": [
+      0,
+      4,
+      8,
+      12,
+      16,
+      20
+    ],
+    "tokenizer_sha256": "440c5b700f3ab487bf1e05727cc11ad984fb8697f101a7641f775d2028defc13",
+    "manifest_sha256": "18e70fa12903d3198ca13189e5ab49f4391fb01d541538b5d2e1de64448159ac"
+  },
+  "sources": {
+    "fly_core.py": "9f7cf24738877671c76ec903f7e202f6176d2755e2b1f0374f00f356925ec735",
+    "fly_interfaces.py": "2967f8d3d0c8556fdb116aa0c00969dac35faae29ebc709f29620cac2f8d13b3",
+    "fly_attention.py": "d755224a706a294bdf41d0bd1dbf0af9638c64c728e63e6a2f9b2b5ebd9c779b",
+    "fly_lm.py": "5f5d61b5f0fe7e39b4e0908124c6ddb97a84ce14ff6b38aae16222c23c852431",
+    "lm_io.py": "cb0d2504cb180e55d486f139dca7940fdee1029e1a112ceba4e3503a594ed843",
+    "verify_phase25.py": "39f1936c6b3d83677cb753745591d855a7ca733b15f32d3f26a7ff3070a742c5"
+  }
+}
