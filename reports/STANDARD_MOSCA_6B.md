@@ -35,3 +35,19 @@ La combinazione porte random + soglia relativa NON è mai stata eseguita insieme
 - Riordino dei nodi: non equivalente (gruppi e porte definiti sull'indice); da rifare con permutazione dei buffer.
 - Costanti di tempo per tipo (D6): richiede learning rate dedicato, non provato.
 - Segni permutati (B4, 3,723): stesso guadagno delle porte random, ma butta via un dato biologico misurato; le porte random cambiano solo l'interfaccia artificiale.
+
+## Candidato sicuro per il default (17 settembre 2026, 18:30, segnato su richiesta utente)
+
+Standard di questo file + **Muon 1e-3 sulle matrici dense** (`--optimizer muon --muon-lr 1e-3`; Muon stile Moonlight FP32 sulle `nn.Linear`: attention q/k/v/o e proiezione di lettura, 301.568 parametri; Adam sul resto; testa di uscita su Adam). Stessa architettura, stesso costo (380 contro 365 ms/update).
+
+| Update | Standard | Standard + Muon 1e-3 | Δ |
+|---|---|---|---|
+| 2000 | 4,580 (replica 4,561) | 4,276 (replica 4,274) | +0,30 |
+| 4000 | 4,000 | 3,845 | +0,155 |
+| 8000 | 3,652 | **3,541** | +0,112 |
+
+Unica leva confermata sopra soglia a 8000 (K8). Riferimento per i test corti dal 17/9 sera: 4,275 a 2000 (media di K1 e K8). Non adottate: Muon 3e-3 (plateau con 1e-3 a 2000, non provato a 8000), Muon sulla testa (−0,33).
+
+Candidato esteso, migliore a 2000 ma non confermato a 8000 e 3,5 volte più costoso: + 8+8 sottopassi + sinapsi a conduttanza + tau per tipo lr 1e-2 (K5, 4,152). A 8000 da sole: 8+8 +0,061, conduttanza +0,029 (sotto soglia). L'adozione nello standard resta decisione dell'utente.
+
+Comando: quello dello standard più `--optimizer muon --muon-lr 1e-3`.

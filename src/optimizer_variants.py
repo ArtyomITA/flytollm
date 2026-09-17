@@ -68,7 +68,10 @@ class HybridMuon:
     torch.optim.Adam (capturable, same betas as the baseline) on everything else, built inside FairCapture through the
     pretrain_control monkeypatch. Every state entry is a CUDA tensor so that FairCapture.restore() can zero it and
     pretrain_resumable's 'step' assertion holds for the Muon parameters too."""
-    def __init__(self,model,params,lr,muon_lr,include_head=False,adam_groups=None,**adam_kw):
+    def __init__(self,model,params,lr,muon_lr,include_head=False,adam_groups=None,adam_cls=None,**adam_kw):
+        # adam_cls: the ORIGINAL torch.optim.Adam. pretrain_control monkeypatches torch.optim.Adam to build this object,
+        # so calling torch.optim.Adam from here would recurse (phase 7e smoke, 17 September 04:30).
+        Adam=adam_cls or torch.optim.Adam
         params=list(params)
         names=matrix_names(model)
         if include_head and hasattr(model,'head'):names=names|{'head'}
@@ -80,9 +83,9 @@ class HybridMuon:
             special={id(p):g_lr for group,g_lr in adam_groups for p in group}
             rest=[p for p in aux if id(p) not in special]
             groups=[dict(params=rest)]+[dict(params=[p for p in aux if special.get(id(p))==g_lr],lr=g_lr) for _,g_lr in adam_groups]
-            self.adam=torch.optim.Adam(groups,lr=lr,**adam_kw)
+            self.adam=Adam(groups,lr=lr,**adam_kw)
         else:
-            self.adam=torch.optim.Adam(aux,lr=lr,**adam_kw)
+            self.adam=Adam(aux,lr=lr,**adam_kw)
         self.params=params;self.lr=lr;self.muon_lr=muon_lr
         # Muon states live in their own dict (Adam's state_dict must only see Adam parameters); `state` is a merged
         # read view for FairCapture.restore() (zeroes every tensor) and pretrain_resumable's 'step' assertion.

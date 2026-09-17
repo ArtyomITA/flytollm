@@ -4,7 +4,7 @@ from pathlib import Path
 from bench_runtime import ROOT, emit, memory, supervise
 import pretrain_resumable as base
 
-CONTROL_SOURCES = ['pretrain_control.py', 'fly_rewire.py', 'fly_graph.py', 'fly_core_variants.py', 'fly_core_fast.py']
+CONTROL_SOURCES = ['pretrain_control.py', 'fly_rewire.py', 'fly_graph.py', 'fly_core_variants.py', 'fly_core_fast.py', 'fly_lm_variants.py', 'optimizer_variants.py']
 
 
 ANNOTATIONS = ROOT / 'dataset/male_cns/body-annotations-male-cns-v1.0.feather'
@@ -24,7 +24,7 @@ def node_column(body_ids, column):
     return t[column].reindex(np.asarray(body_ids)).fillna('').astype(str).to_numpy()
 
 
-def variant_ports(body_ids, sensory, read_nodes, ports, seed=17):
+def variant_ports(body_ids, sensory, read_nodes, ports, seed=17, count=None):
     import numpy as np, torch
     n = len(body_ids)
     if ports == 'anatomical':
@@ -32,8 +32,8 @@ def variant_ports(body_ids, sensory, read_nodes, ports, seed=17):
     if ports == 'random_matched':
         rng = np.random.default_rng(seed)
         candidates = np.setdiff1d(np.arange(n), read_nodes.numpy())
-        chosen = np.sort(rng.choice(candidates, sensory.numel(), replace=False))
-        return torch.from_numpy(chosen), dict(ports='random_matched', count=int(len(chosen)), overlap_with_anatomical=float(np.isin(chosen, sensory.numpy()).mean()))
+        chosen = np.sort(rng.choice(candidates, int(count) if count else sensory.numel(), replace=False))
+        return torch.from_numpy(chosen), dict(ports='random_matched', count=int(len(chosen)), seed=int(seed), overlap_with_anatomical=float(np.isin(chosen, sensory.numpy()).mean()))
     if ports == 'olfactory':
         cls = node_column(body_ids, 'class')
         chosen = np.flatnonzero(cls == 'olfactory')
@@ -126,7 +126,7 @@ def core_variant_arg(value):
 
 
 def build_control_cns(threshold, seed, kind='degree', ports='anatomical', readout='chunks', core_variant='lif', fast_mode='off', chunk=262144, index_dtype='int64',
-                      pre_steps=4, post_steps=4, weight_scale=1.0):
+                      pre_steps=4, post_steps=4, weight_scale=1.0, loop=None, freeze_core=False, ports_seed=17, ports_count=None, homeo=None, arousal=None):
     import numpy as np, torch
     from fly_core import Core
     from fly_core_variants import parse_variant
@@ -164,22 +164,42 @@ def build_control_cns(threshold, seed, kind='degree', ports='anatomical', readou
             kwargs['kc'] = torch.from_numpy(np.flatnonzero(node_column(data['body_ids'], 'class') == 'Kenyon_Cell'))
         if 'graded_ol' in flags:
             kwargs['ol'] = torch.from_numpy(np.flatnonzero(node_column(data['body_ids'], 'superclass') == 'ol_intrinsic'))
-        if flags & {'tau_type', 'bias_type'}:
+        if 'homeo' in flags and homeo:
+            kwargs['homeo'] = homeo
+        if 'arousal' in flags and arousal:
+            kwargs['arousal'] = arousal
+        if flags & {'tau_type', 'bias_type', 'homeo'}:
             _, index = np.unique(node_column(data['body_ids'], 'type'), return_inverse=True)
             kwargs['type_index'] = torch.from_numpy(index.astype(np.int64))
+        if 'gain_group' in flags:
+            names, index = np.unique(node_column(data['body_ids'], 'superclass'), return_inverse=True)
+            kwargs['group_index'] = torch.from_numpy(index.astype(np.int64))
+            extra['gain_groups'] = [str(x) for x in names]
         core = VariantCore(*args, core_variant, **kwargs)
         extra['core'] = core.describe()
     sensory, read_nodes, groups, labels = anatomical_ports(data['body_ids'], ANNOTATIONS)
     if readout in ('fru', 'hub', 'cx'):
         read_nodes, groups, readout_info = variant_readout(data['body_ids'], data['src'], data['dst'], sensory, read_nodes, groups, readout)
         extra['readout'] = readout_info
-    sensory, port_info = variant_ports(data['body_ids'], sensory, read_nodes, ports)
+    sensory, port_info = variant_ports(data['body_ids'], sensory, read_nodes, ports, seed=ports_seed, count=ports_count)
     extra['ports'] = port_info
     if readout == 'anatomical':
         groups, readout_info = anatomical_readout_groups(data['body_ids'], read_nodes)
         extra['readout'] = readout_info
     interfaces = TextInterfaces(n, sensory, read_nodes, groups)
-    model = FlyLM(core, interfaces, CausalAttention(), LMConfig(pre_steps=int(pre_steps), post_steps=int(post_steps))).cuda()
+    if freeze_core:
+        # reservoir / identity controls (phase 8): the synaptic weights become a buffer, never trained
+        raw = core._parameters.pop('raw')
+        core.register_buffer('raw', raw.detach().clone())
+        extra['freeze_core'] = True
+    config = LMConfig(pre_steps=int(pre_steps), post_steps=int(post_steps))
+    if loop is None:
+        model = FlyLM(core, interfaces, CausalAttention(), config).cuda()
+    else:
+        from fly_lm_variants import LoopedFlyLM
+        from dataclasses import asdict
+        model = LoopedFlyLM(core, interfaces, CausalAttention(), config, loop).cuda()
+        extra['loop'] = dict(asdict(loop), reads=list(model.reads), rows=model.rows)
     extra['steps'] = dict(pre=int(pre_steps), post=int(post_steps))
     stats = dict(stats, **extra)
     return model, data, stats
@@ -206,9 +226,21 @@ def main():
     p.add_argument('--core-variant', type=core_variant_arg, default='lif', help="one of %s or several joined by '+', e.g. bias_type+tau_type+reversal" % (VARIANTS,))
     p.add_argument('--weight-scale', type=float, default=1.0, help='multiply the initial synaptic magnitudes by this factor (phase 7c, global scale lever)')
     p.add_argument('--type-param-lr', type=float, default=None, help='dedicated Adam learning rate for the per-cell-type parameters (leak_logit, bias_type); default = same as the rest')
+    p.add_argument('--core-lr', type=float, default=None, help='dedicated Adam learning rate for the synaptic weights (core.raw); phase 8: at 1e-4 the 2.75 M weights move 0.3%% in 8000 updates')
     p.add_argument('--optimizer', choices=['adam', 'muon'], default='adam', help='muon = Moonlight-style Muon on the dense nn.Linear matrices (attention q/k/v/o, readout projection), Adam on the rest (phase 7e)')
     p.add_argument('--muon-lr', type=float, default=1e-4, help='Muon base learning rate; effective per matrix = base * 0.2 * sqrt(max(shape))')
     p.add_argument('--muon-head', action='store_true', help='also give the separate output head matrix (4096x256) to Muon')
+    p.add_argument('--attn-reads', default='default', help="substeps after which the attention is read: 'default' (after pre-steps, the main model), 'off', 'every', or a comma list such as 2,6 (phase 8, LoopedFlyLM)")
+    p.add_argument('--attn-kv', choices=['final', 'per_read', 'first'], default='final', help='KV cache regime of the looped model')
+    p.add_argument('--attn-step-id', action='store_true', help='per-read gain and bias on the query input (step identifier)')
+    p.add_argument('--attn-inject', choices=['none', 'concat'], default='none', help='concat = query input is adapter([state ; token embedding])')
+    p.add_argument('--token-injection', choices=['all', 'first'], default='all', help='token current at every substep (main model) or at the first substep only')
+    p.add_argument('--depth-schedule', default='', help="substeps per half changing during training, e.g. 0:12,500:8,1000:4,1500:12 (start_update:depth); needs --pre-steps = --post-steps = the maximum depth (phase 8, N6d)")
+    p.add_argument('--homeo', default='', help='target,eta of the wake-up homeostasis (core flag homeo), e.g. 0.02,2e-5')
+    p.add_argument('--arousal', default='', help='shape,amplitude,period_updates,duty_updates of the arousal schedule (core flag arousal), e.g. pulse,0.3,500,100 or smooth,0.3,500,0')
+    p.add_argument('--freeze-core', action='store_true', help='synaptic weights frozen at their initial values (reservoir / identity controls)')
+    p.add_argument('--ports-seed', type=int, default=17, help='seed of the random ports (random_matched)')
+    p.add_argument('--ports-count', type=int, default=None, help='number of random ports (random_matched); default = as many as the anatomical ports')
     p.add_argument('--fast-mode', choices=['off', 'gather', 'fp16', 'csr', 'fused'], default='off', help='speed core (fly_core_fast.FastCore); off = fly_core.Core')
     p.add_argument('--chunk', type=int, default=262144, help='edges per propagation chunk (fast core only)')
     p.add_argument('--index-dtype', choices=['int64', 'int32'], default='int64', help='edge index dtype (fast core only)')
@@ -234,12 +266,20 @@ def main():
         holder = {}
 
         def patched(threshold=10):
+            loop = None
+            if a.attn_reads != 'default' or a.attn_kv != 'final' or a.attn_step_id or a.attn_inject != 'none' or a.token_injection != 'all' or a.depth_schedule:
+                from fly_lm_variants import LoopConfig, parse_reads, parse_schedule
+                loop = LoopConfig(reads=parse_reads(a.attn_reads, a.pre_steps, a.post_steps), kv=a.attn_kv, step_id=a.attn_step_id,
+                                  inject=a.attn_inject, token_injection=a.token_injection, depth_schedule=parse_schedule(a.depth_schedule))
             model, data, stats = build_control_cns(threshold, a.rewire_seed, a.rewire_kind, a.ports, a.readout, a.core_variant, a.fast_mode, a.chunk, a.index_dtype,
-                                                   a.pre_steps, a.post_steps, a.weight_scale)
+                                                   a.pre_steps, a.post_steps, a.weight_scale, loop=loop, freeze_core=a.freeze_core,
+                                                   ports_seed=a.ports_seed, ports_count=a.ports_count,
+                                                   homeo=tuple(float(x) for x in a.homeo.split(',')) if a.homeo else None,
+                                                   arousal=(lambda f: (f[0], float(f[1]), float(f[2]), float(f[3])))(a.arousal.split(',')) if a.arousal else None)
             holder['data'] = data; holder['stats'] = stats; holder['model'] = model
             return model
         lm_io.build_cns = patched
-        if a.adam != 'default' or a.type_param_lr is not None or a.optimizer == 'muon':
+        if a.adam != 'default' or a.type_param_lr is not None or a.optimizer == 'muon' or a.core_lr is not None:
             original_adam = torch.optim.Adam
 
             def patched_adam(params, **kw):
@@ -255,22 +295,33 @@ def main():
                 if a.type_param_lr is not None:
                     # dedicated learning rate for the per-cell-type parameters (phase 7c: D6 was budget-limited at 1e-4)
                     core = holder['model'].core
-                    special = {id(t) for name, t in core.named_parameters() if name in ('leak_logit', 'bias_type')}
+                    special = {id(t) for name, t in core.named_parameters() if name in ('leak_logit', 'bias_type', 'group_gain')}
                     typed = [p for p in params if id(p) in special]
                     if not typed:
                         raise RuntimeError('type-param-lr given but the core has no per-type parameters')
                     holder['stats']['type_param_lr'] = dict(lr=float(a.type_param_lr), tensors=len(typed), values=int(sum(p.numel() for p in typed)))
+                groups = [(typed, float(a.type_param_lr))] if typed else []
+                if a.core_lr is not None:
+                    raw = [p for p in params if p is holder['model'].core.raw]
+                    if not raw:
+                        raise RuntimeError('core-lr given but core.raw is not a trainable parameter')
+                    same = [g for g in groups if g[1] == float(a.core_lr)]
+                    if same:
+                        same[0][0].extend(raw)
+                    else:
+                        groups.append((raw, float(a.core_lr)))
+                    holder['stats']['core_lr'] = dict(lr=float(a.core_lr), values=int(raw[0].numel()))
                 if a.optimizer == 'muon':
                     from optimizer_variants import HybridMuon
                     kw.pop('fused', None)
                     opt = HybridMuon(holder['model'], params, kw.pop('lr'), a.muon_lr, include_head=a.muon_head,
-                                     adam_groups=[(typed, float(a.type_param_lr))] if typed else None, foreach=False, **kw)
+                                     adam_groups=groups or None, adam_cls=original_adam, foreach=False, **kw)
                     holder['stats']['optimizer'] = dict(kind='muon', muon_lr=float(a.muon_lr), matrices=opt.matrix_names,
                                                         matrix_values=int(sum(p.numel() for p in opt.matrices)))
                     return opt
-                if typed:
-                    typed_ids = {id(p) for p in typed}
-                    params = [dict(params=[p for p in params if id(p) not in typed_ids]), dict(params=typed, lr=float(a.type_param_lr))]
+                if groups:
+                    special_ids = {id(p) for group, _ in groups for p in group}
+                    params = [dict(params=[p for p in params if id(p) not in special_ids])] + [dict(params=group, lr=lr) for group, lr in groups]
                 return original_adam(params, **kw)
             torch.optim.Adam = patched_adam
         data, stats = load_control_graph(a.threshold, a.rewire_seed, a.rewire_kind)
@@ -292,7 +343,10 @@ def main():
                                    rewire_seed=a.rewire_seed, rewire_kind=a.rewire_kind, ports=a.ports, readout=a.readout,
                                    core_variant=a.core_variant, fast_mode=a.fast_mode, chunk=a.chunk, index_dtype=a.index_dtype, adam=a.adam,
                                    pre_steps=a.pre_steps, post_steps=a.post_steps, weight_scale=a.weight_scale, type_param_lr=a.type_param_lr,
-                                   optimizer=a.optimizer, muon_lr=a.muon_lr if a.optimizer == 'muon' else None, stats=holder['stats'],
+                                   optimizer=a.optimizer, muon_lr=a.muon_lr if a.optimizer == 'muon' else None,
+                                   attn_reads=a.attn_reads, attn_kv=a.attn_kv, attn_step_id=a.attn_step_id, attn_inject=a.attn_inject,
+                                   token_injection=a.token_injection, freeze_core=a.freeze_core, core_lr=a.core_lr, depth_schedule=a.depth_schedule, homeo=a.homeo, arousal=a.arousal, ports_seed=a.ports_seed, ports_count=a.ports_count,
+                                   stats=holder['stats'],
                                    sources={f: hashlib.sha256((ROOT / f).read_bytes()).hexdigest() for f in CONTROL_SOURCES}),
                       semantic_verdict=f'control run: graph={a.rewire_kind}, ports={a.ports}, readout={a.readout}, core={a.core_variant}; same nodes and init; 2000-update test, not a model change')
     except Exception as exc:

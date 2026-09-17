@@ -280,10 +280,13 @@ class Suite:
     def spectral(self, iterations=60):
         core = self.model.core
         with torch.no_grad():
-            w = core.weights(); v = torch.randn(self.n, device='cuda'); v /= v.norm(); radius = None
+            # 17 September 2026: the iteration oscillates with period 2 (dominant +/- pair); a single norm is one phase of
+            # the oscillation, not the radius. Report the geometric mean of two consecutive norms, fixed seed.
+            g = torch.Generator(device='cuda').manual_seed(0)
+            w = core.weights(); v = torch.randn(self.n, device='cuda', generator=g); v /= v.norm(); history = []
             for _ in range(iterations):
-                out = torch.zeros_like(v).index_add_(0, core.dst, w * v[core.src]); radius = float(out.norm()); v = out / max(radius, 1e-12)
-        return dict(spectral_radius_trained=radius, iterations=iterations)
+                out = torch.zeros_like(v).index_add_(0, core.dst, w * v[core.src]); radius = float(out.norm()); v = out / max(radius, 1e-12); history.append(radius)
+        return dict(spectral_radius_trained=(history[-1] * history[-2]) ** .5, last_two_norms=history[-2:], iterations=iterations)
 
     def persistence(self):
         """Correlation of the voltage with itself after 8 and 16 silent substeps from the DEV end state."""

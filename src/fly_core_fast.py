@@ -224,6 +224,35 @@ class PropagateFused(torch.autograd.Function):
         return gs, gw, None, None
 
 
+class PropagateFusedSoft(torch.autograd.Function):
+    """Fused propagation with binary spikes forward; the backward kernel receives the soft presynaptic activity p in
+    place of the spikes, so gw = sum_b g[b, dst] * p[b, src] (phase 8, C16). gs does not depend on the activity."""
+    @staticmethod
+    def forward(ctx, s, p, w, src32, dst32):
+        s = s.contiguous(); w = w.contiguous(); p = p.contiguous()
+        out = torch.zeros_like(s)
+        B, N = s.shape; E = w.numel()
+        k = _fused_kernels()
+        import cupy
+        _launch(k['fwd'], (numpy.uintp(s.data_ptr()), numpy.uintp(w.data_ptr()), numpy.uintp(src32.data_ptr()), numpy.uintp(dst32.data_ptr()),
+                           numpy.uintp(out.data_ptr()), cupy.int32(E), cupy.int32(B), cupy.int32(N)), E)
+        ctx.save_for_backward(p, w, src32, dst32)
+        return out
+
+    @staticmethod
+    def backward(ctx, g):
+        p, w, src32, dst32 = ctx.saved_tensors
+        g = g.contiguous()
+        gs = torch.zeros_like(g); gw = torch.empty_like(w)
+        B, N = g.shape; E = w.numel()
+        k = _fused_kernels()
+        import cupy
+        _launch(k['bwd'], (numpy.uintp(p.data_ptr()), numpy.uintp(w.data_ptr()), numpy.uintp(src32.data_ptr()), numpy.uintp(dst32.data_ptr()),
+                           numpy.uintp(g.data_ptr()), numpy.uintp(gs.data_ptr()), numpy.uintp(gw.data_ptr()),
+                           cupy.int32(E), cupy.int32(B), cupy.int32(N)), E)
+        return gs, None, gw, None, None
+
+
 class FusedCore(FastCore):
     """FastCore with the fused cupy kernels (mode 'fused')."""
     def __init__(self, src, dst, magnitude, signs, n, chunk=262144):
@@ -242,8 +271,8 @@ class FusedCore(FastCore):
 class FusedVariantCore(__import__('fly_core_variants').VariantCore):
     """VariantCore (apl / graded_ol / tau_type / reversal) with the fused cupy propagation kernel. The kernel reads float
     presynaptic activations, so graded units work unchanged; reversal calls it twice (excitatory / inhibitory)."""
-    def __init__(self, src, dst, magnitude, signs, n, variant, kc=None, ol=None, type_index=None, chunk=262144):
-        super().__init__(src, dst, magnitude, signs, n, variant, kc=kc, ol=ol, type_index=type_index, chunk=chunk)
+    def __init__(self, src, dst, magnitude, signs, n, variant, **kw):
+        super().__init__(src, dst, magnitude, signs, n, variant, **kw)
         self.register_buffer('src32', src.to(torch.int32))
         self.register_buffer('dst32', dst.to(torch.int32))
 
@@ -252,3 +281,6 @@ class FusedVariantCore(__import__('fly_core_variants').VariantCore):
 
     def propagate(self, s, w):
         return PropagateFused.apply(s, w, self.src32, self.dst32)
+
+    def propagate_soft(self, s, p, w):
+        return PropagateFusedSoft.apply(s, p, w, self.src32, self.dst32)

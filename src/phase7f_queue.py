@@ -43,8 +43,21 @@ def main():
             state['failed'].append(dict(name=name, error=str(exc))); q.write_state(state)
 
     try:
+        job('phase7_lever_scale025_2000', ['--weight-scale', 0.25], 2000, 14400)
+        job('phase7_lever_bias_scaled_2000', ['--core-variant', 'bias_type', '--type-param-lr', 5e-3], 2000, 14400)  # H1 fix: bias = 0.02 * param (grad-clip starvation)  # follow-up of H6 (monotone: x0.5 4.508 < x1 4.580 < x2 4.666)
         job('phase7_lever_tau3e3_2000', ['--core-variant', 'tau_type', '--type-param-lr', 3e-3], 2000, 14400)
         job('phase7_lever_revtau_2000', ['--core-variant', 'tau_type+reversal', '--type-param-lr', 1e-3], 2000, 14400)
+        # Muon runs (section I): the 7e smokes failed on a monkeypatch recursion (fixed 04:35); smoke again, then the four runs
+        MUON = ['--optimizer', 'muon', '--muon-lr', 1e-4]
+        try:
+            q.run_job(state, 'phase7_smoke_muon_v2', 'pretrain_control', STANDARD + MUON + ['--updates', 4, '--checkpoint-every', 4], 1800); muon_ok = True
+        except RuntimeError as exc:
+            state['failed'].append(dict(name='phase7_smoke_muon_v2', error=str(exc))); q.write_state(state); muon_ok = False
+        if muon_ok:
+            job('phase7_lever_muon_2000', MUON, 2000, 14400)
+            job('phase7_lever_muon3e4_2000', ['--optimizer', 'muon', '--muon-lr', 3e-4], 2000, 14400)
+            job('phase7_lever_T8muon_2000', T8 + MUON, 2000, 14400)
+            job('phase7_lever_muonhead_2000', MUON + ['--muon-head'], 2000, 14400)
         checkpoint = ROOT / 'results/phase7_tengo_T8_2000.latest.pt'
         if checkpoint.exists():
             inference(state, checkpoint, 'T8_2000')

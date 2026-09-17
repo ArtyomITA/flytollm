@@ -1,6 +1,6 @@
 # Indice del codice
 
-Copia dei sorgenti del progetto (17 settembre 2026). Percorsi relativi alla radice del progetto: i dati vanno in `dataset/`, i risultati in `results/`.
+Copia dei sorgenti del progetto (17 settembre 2026, sera). Percorsi relativi alla radice del progetto: i dati vanno in `dataset/`, i risultati in `results/`.
 
 ## Modello
 - `fly_graph.py` — carica il connettoma male-cns (annotazioni, neurotrasmettitori, pesi), costruisce e mette in cache il grafo a soglia (nodi, archi, conteggi, segni, sensoriali).
@@ -30,7 +30,18 @@ Copia dei sorgenti del progetto (17 settembre 2026). Percorsi relativi alla radi
 - `phase6c_reachability.py`, `phase6d_hops.py` — distanze in sinapsi porte → lettura.
 - `phase6c_microbench.py`, `phase6s_speed.py` — micro-benchmark e suite di velocità.
 - `phase6_state_probe.py`, `phase6c_summary.py`, `phase6_record.py` — sonda lineare sullo stato, riepiloghi, registrazione automatica dei risultati nel file della suite.
-- `phase7_queue.py` … `phase7f_queue.py` — fase 7: baseline standard, leve (sottopassi, porte corte, archi, eccitabilità, conduttanza, monoammine, scala, Muon), promozioni.
+- `phase7_queue.py` … `phase7i_queue.py` — fase 7: baseline standard, leve (sottopassi, porte corte, archi, eccitabilità, conduttanza, monoammine, scala, Muon), promozioni a 8000.
+
+## Fase 8 (corti sul candidato per il default: standard + Muon 1e-3)
+- `fly_lm_variants.py` — `LoopedFlyLM`: attention letta più volte per token dentro il giro dei sottopassi (cache per lettura, identificativo di passo, input injection per concatenazione), ablazione dell'iniezione del token, attention spenta, schedule di profondità durante il training con un solo CUDA Graph (sottopassi congelati + contatore su GPU). Con una lettura riproduce `FlyLM.step`.
+- `fly_core_variants.py` (aggiornato) — flag nuovi: `cond_ports` (porte a conduttanza), `gain_group` (guadagno per superclasse), `soft_gw` (gradiente del peso allargato ai presinaptici vicini alla soglia), `homeo` (omeostasi di risveglio per tipo cellulare, senza gradiente), `arousal` (eccitabilità globale schedulata, a impulsi o a onda).
+- `pretrain_control.py` (aggiornato) — opzioni `--attn-reads --attn-kv --attn-step-id --attn-inject --token-injection --depth-schedule --core-lr --freeze-core --ports-seed --ports-count --homeo --arousal`.
+- `phase8_selftest.py` — self-test CPU su un grafo minuscolo: equivalenza col modello base, gradiente finito su ogni parametro, identità all'init delle varianti, omeostasi, arousal, schedule di profondità.
+- `phase8a_queue.py`, `phase8b_queue.py` — code dei corti (la 8b è riprendibile: salta le run già fatte).
+- `phase8_cpu_analyses.py` — raggio spettrale all'init (con la correzione dell'oscillazione di periodo 2) e raggiungibilità con segno porte → lettura.
+- `phase8_coverage.py` — quanto cervello impara: variazione relativa dei pesi sinaptici, archi mossi, scarti di soglia, leak.
+- `phase8_c15_revert_weights.py` — CE di un checkpoint con le sinapsi rimesse ai valori iniziali.
+- `phase8_n0_diagnostic.py`, `phase8_depth_transfer.py` — cosa cambia fra letture ipotetiche dell'attention; trasferimento fra profondità a inferenza.
 
 ## Fasi precedenti
 - `phase3_*`, `phase35_*`, `verify_*`, `test_*`, `summarize_*`, `bench_throughput.py`, `train_diagnostic.py`, `graph_specialization_probe.py`, `analyze_graph_specialization.py`, `anatomy_fanout_tests.py`, `audit_step0.py`, `generate_phase35.py` — diagnostica, verifiche e test unitari delle fasi 2-3 (vedi `reports/PIANO_FASI.md`).
