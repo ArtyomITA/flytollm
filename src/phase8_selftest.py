@@ -58,6 +58,7 @@ def check_gradients():
         'N1b every substep, final cache': LoopConfig(reads=tuple(range(1, 8)), kv='final'),
         'N4 two reads, no step id': LoopConfig(reads=(2, 6), kv='per_read'),
         'N5 token injected at first substep only': LoopConfig(reads=(4,), token_injection='first'),
+        'N5b token at first substep, tonic bias at every substep': LoopConfig(reads=(4,), token_injection='first_tonic'),
         'attention off': LoopConfig(reads=()),
     }
     ids = tokens(); targets = tokens(seed=2)

@@ -29,12 +29,17 @@ RUNS = [
     # shorts (2000 updates)
     ('phase8_L8_best_T12_2000', T12 + ['--core-variant', 'tau_type+reversal', '--type-param-lr', 1e-2], 21600),
     ('phase8_H5_arousal_smooth_T12_2000', T12 + ['--core-variant', 'arousal', '--arousal', 'smooth,0.3,500,0'], 14400),
-    ('phase8_H6_wake_learn_T8_2000', T8 + WAKE, 21600),
-    ('phase8_H7_wake_learn_T12_2000', T12 + WAKE, 21600),
     # longs (8000 updates): the references at the same depth first, then the 'more synapses learn' runs (user: 12+12 at 8000 too)
     ('phase8_L9_T8_8000', T8, 43200, 8000),
     ('phase8_C17_soft_corelr_T8_8000', T8 + ['--core-variant', 'soft_gw', '--core-lr', SYN_LR], 43200, 8000),
     ('phase8_L10_T12_8000', T12, 43200, 8000),
+]
+# POSTPONED (user, 18 September 17:50, after H1 diverged: gradient norm 1e10 with the homeostasis 0.02,2e-5 and cap 0.9):
+# H6, H7 and C18 use the same homeostasis; they wait until a short homeostasis run is stable (H1b in phase8d_queue), then
+# they are re-proposed with the stable parameters. Not run by main().
+POSTPONED = [
+    ('phase8_H6_wake_learn_T8_2000', T8 + WAKE, 21600),
+    ('phase8_H7_wake_learn_T12_2000', T12 + WAKE, 21600),
     ('phase8_C18_wake_learn_T12_8000', T12 + WAKE, 43200, 8000),
 ]
 

@@ -28,6 +28,11 @@ RESULT = {
     'A2.7.2': 'FATTO: guadagno esterno per superclasse (lr 1e-2) a 8+8: 4,198 (+0,011, rumore), costo ×1,9; guadagni ×2 su intrinsic/cb_sensory, invertiti su sensory_ascending; spike +35%, CE ferma.',
     'B2.5.3a': 'FATTO: nucleo identità (sinapsi spente e congelate) a 8+8: 5,864 (+1,677): il cablaggio vale 1,68 nat come reservoir fisso.',
     'B10': "FATTO: reservoir (sinapsi reali congelate all'init) a 8+8: 4,182 vs 4,187: identico al nucleo allenato, −6% costo.",
+    'B8': 'FATTO: porte random seme 23 a 8+8: 4,185 vs 4,187: il campione di porte non conta.',
+    'B9': 'FATTO: 2.639 porte 4,214 (+0,027), 1.733 porte 4,221 (+0,034): capacità di ingresso abbondante; il costo delle porte anatomiche è anatomia, non numero.',
+    'B2.5.2': 'FATTO: reale+att 4,184 · reale senza 4,282 · rimescolato+att 4,243 · rimescolato senza 4,321. Attention 0,098 / 0,078, interazione +0,020 (rumore). Grafo reale avanti +0,059 / +0,039: prima volta sopra un null (un seme, da confermare).',
+    'H1o': 'FATTO: omeostasi (bersaglio 0,02, tetto 0,9) DIVERGE: 8+8 5,608, 12+12 5,870, gradiente 1e10-1e16. H1b (tetto 0,35, bersaglio 0,005) in coda 8d; H6/H7/C18 rimandate.',
+    'H2a': 'FATTO: impulsi 4,245 (+0,058), onda 4,218 (+0,031), stabili, archi mossi ×2-2,6; C15: sinapsi in più non lavorano (H2 −0,011, H3 +0,002, L4 +0,004).',
     'C13': 'FATTO: caricatore universale delle varianti (phase8_load_variant.py): K5 ricostruito, CE DEV 4,1529 = 4,152. Suite di inferenza su ogni variante.',
     'C16': 'FATTO: gradiente allargato a 8+8 con passo 1e-4 / 1e-3 / 1e-2: 4,183 / 4,185 / 4,200 vs L4 4,187 (tutto rumore) con pesi mossi 0,4% / 3,2% / 27,8% e archi mossi 10,5% / 20,6% / 30,4%: la CE non dipende dal movimento sinaptico. Famiglia chiusa.',
 }

@@ -126,7 +126,11 @@ class VariantCore(Core):
         if self.flags & {'reversal', 'cond_ports'}:
             self.e_rev, self.i_rev = 3., -1.
         if 'homeo' in self.flags:
-            self.homeo_target, self.homeo_eta = (float(x) for x in (homeo or (0.02, 2e-5)))
+            values = tuple(float(x) for x in (homeo or (0.02, 2e-5)))
+            self.homeo_target, self.homeo_eta = values[:2]
+            # cap of the threshold offset: 0.9 in H1 (18 September: two thirds of the brain ended next to threshold and
+            # the backward pass became supercritical, gradient norm 1e10); H1b uses a lower cap
+            self.homeo_cap = values[2] if len(values) > 2 else 0.9
             types = int(self.type_index.max()) + 1
             self.register_buffer('type_count', torch.bincount(self.type_index, minlength=types).clamp_min(1).float())
             self.register_buffer('homeo_rate', torch.full((types,), self.homeo_target))
@@ -175,7 +179,7 @@ class VariantCore(Core):
         if 'gain_group' in self.flags:
             d.update(gain_groups=int(self.group_gain.numel()))
         if 'homeo' in self.flags:
-            d.update(homeo_target=self.homeo_target, homeo_eta=self.homeo_eta)
+            d.update(homeo_target=self.homeo_target, homeo_eta=self.homeo_eta, homeo_cap=self.homeo_cap)
         if 'arousal' in self.flags:
             d.update(arousal=list(self.arousal))
         return d
@@ -267,7 +271,7 @@ class VariantCore(Core):
                     per_type = torch.zeros_like(self.homeo_rate).index_add_(0, self.type_index, per_node) / self.type_count
                     self.homeo_rate.mul_(0.99).add_(0.01 * per_type)
                     error = (self.homeo_target - self.homeo_rate) / self.homeo_target
-                    self.thr_offset.add_(self.homeo_eta * torch.where(error > 0, error, 0.1 * error)).clamp_(0., 0.9)
+                    self.thr_offset.add_(self.homeo_eta * torch.where(error > 0, error, 0.1 * error)).clamp_(0., self.homeo_cap)
                 if 'arousal' in self.flags and reset is not None:
                     self.tokens.add_(1)   # the first advance() of every token carries the reset mask
         return (v, s), rate / steps

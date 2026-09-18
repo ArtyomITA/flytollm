@@ -41,8 +41,17 @@ def main():
     p.add_argument('--rewire-seed', type=int, default=41)
     p.add_argument('--weight-scale', type=float, default=1.0)
     p.add_argument('--output', required=True)
+    p.add_argument('--run', default=None, help='result name: load any control variant through phase8_load_variant.VariantSuite (graph kind, seed and weight scale from its control record)')
     a = p.parse_args(); started = time.time()
-    path = Path(a.checkpoint_path); suite = Suite(path.stem, path); core = suite.model.core
+    path = Path(a.checkpoint_path)
+    if a.run:
+        from phase8_load_variant import VariantSuite
+        suite = VariantSuite(a.run, a.checkpoint_path); c = suite.control
+        assert c.get('init_norm', 'sum') == 'sum', 'fluctuation init: use the E0 panel formula'
+        a.kind, a.rewire_seed, a.weight_scale = c['rewire_kind'], c['rewire_seed'], float(c.get('weight_scale', 1.0))
+    else:
+        suite = Suite(path.stem, path)
+    core = suite.model.core
     data, _ = load_control_graph(10, a.rewire_seed, a.kind)
     assert np.array_equal(core.src.cpu().numpy(), data['src']) and np.array_equal(core.dst.cpu().numpy(), data['dst']), 'checkpoint graph differs'
     n = core.n; counts = np.log1p(data['weight']); incoming = np.bincount(data['dst'], weights=counts, minlength=n)

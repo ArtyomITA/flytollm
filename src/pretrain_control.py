@@ -272,7 +272,7 @@ def main():
     p.add_argument('--attn-kv', choices=['final', 'per_read', 'first'], default='final', help='KV cache regime of the looped model')
     p.add_argument('--attn-step-id', action='store_true', help='per-read gain and bias on the query input (step identifier)')
     p.add_argument('--attn-inject', choices=['none', 'concat'], default='none', help='concat = query input is adapter([state ; token embedding])')
-    p.add_argument('--token-injection', choices=['all', 'first'], default='all', help='token current at every substep (main model) or at the first substep only')
+    p.add_argument('--token-injection', choices=['all', 'first', 'first_tonic'], default='all', help='token current at every substep (main model), at the first substep only, or at the first substep with the tonic injector bias kept at every substep (N5b)')
     p.add_argument('--depth-schedule', default='', help="substeps per half changing during training, e.g. 0:12,500:8,1000:4,1500:12 (start_update:depth); needs --pre-steps = --post-steps = the maximum depth (phase 8, N6d)")
     p.add_argument('--homeo', default='', help='target,eta of the wake-up homeostasis (core flag homeo), e.g. 0.02,2e-5')
     p.add_argument('--arousal', default='', help='shape,amplitude,period_updates,duty_updates of the arousal schedule (core flag arousal), e.g. pulse,0.3,500,100 or smooth,0.3,500,0')

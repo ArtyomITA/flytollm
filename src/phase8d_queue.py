@@ -30,10 +30,17 @@ RUNS = [
     # Adam on core.raw applied every 16 updates on the gradient summed over those 16 (effective batch x16 for the
     # synapses only), synaptic lr 3e-3 (the approved value), 8+8; a short added to the tail, the runs above are unchanged
     ('phase8_E5_accum16_T8_2000', T8 + ['--core-lr', 3e-3, '--core-accumulate', 16], 'accum'),
+    # N5b (user yes, 18 September 16:30): token-dependent current at the first substep only, tonic injector bias at every
+    # substep: separates 'repeated information' from 'vital current' (N5 removed both: 4.914 vs 4.187)
+    ('phase8_N5b_first_tonic_T8_2000', T8 + ['--token-injection', 'first_tonic'], 'tonic'),
+    # H1b (user yes, 18 September 17:50): the wake-up homeostasis with a realistic target (0.005 spikes per substep) and
+    # the threshold offset capped at 0.35 (H1: target 0.02, cap 0.9 -> offsets saturated, gradient norm 1e10, CE 5.608)
+    ('phase8_H1b_homeo_cap035_T8_2000', T8 + ['--core-variant', 'homeo', '--homeo', '0.005,2e-5,0.35'], 'homeocap'),
 ]
 SMOKES = dict(coreonly=CORE_ONLY + ['--core-lr', 1e-2, '--core-variant', 'soft_gw'], fluct=T8 + ['--init-norm', 'fluct', '--weight-scale', 2.2],
               iface=T8 + ['--interface-lr', 1e-6, '--muon-lr', 1e-5, '--core-lr', 3e-3], outscale=T8 + ['--output-scale', 0.01],
-              accum=T8 + ['--core-lr', 3e-3, '--core-accumulate', 16])
+              accum=T8 + ['--core-lr', 3e-3, '--core-accumulate', 16], tonic=T8 + ['--token-injection', 'first_tonic'],
+              homeocap=T8 + ['--core-variant', 'homeo', '--homeo', '0.005,2e-5,0.35'])
 
 
 def done(run):

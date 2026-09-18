@@ -13,7 +13,9 @@ kv               'final'    one KV cache, keys/values from the final state of ea
                             KV sharing)
 step_id          per-read identifier: elementwise gain (init 1) and bias (init 0) on the query input
 inject           'concat': the query input is adapter([state ; token embedding]) with adapter init [I | 0] (Huginn)
-token_injection  'all' (token current at every substep, the main model) or 'first' (first substep only)
+token_injection  'all' (token current at every substep, the main model), 'first' (first substep only, then no input
+                 current at all) or 'first_tonic' (N5b, user yes 18 September 2026: token-dependent current at the first
+                 substep only, then the token-independent tonic current of the injector, its bias, at every substep)
 depth_schedule   ((start_update, depth), ...): the number of substeps per half (pre = post = depth) changes DURING training
                  (user idea of 17 September 2026: 12+12, then 8+8, then 4+4, then the shock back to 12+12). The model
                  always runs pre_steps + post_steps = the maximum depth; substeps beyond the current depth are no-ops (state
@@ -64,13 +66,13 @@ class LoopedFlyLM(FlyLM):
         reads = tuple(int(r) for r in l.reads)
         if list(reads) != sorted(set(reads)) or any(r < 1 or r >= self.total for r in reads):
             raise ValueError(f'reads must be increasing substeps in 1..{self.total - 1}, got {reads}')
-        if l.kv not in ('final', 'per_read', 'first') or l.inject not in ('none', 'concat') or l.token_injection not in ('all', 'first'):
+        if l.kv not in ('final', 'per_read', 'first') or l.inject not in ('none', 'concat') or l.token_injection not in ('all', 'first', 'first_tonic'):
             raise ValueError(f'invalid loop configuration {l}')
         self.reads = reads
         self.after = reads[0] if reads else c.pre_steps          # the final rate averages the substeps after this one
         self.rows = len(reads) if (l.kv == 'per_read' and reads) else 1
         bounds = set(reads) | {self.after, self.total}
-        if l.token_injection == 'first':
+        if l.token_injection in ('first', 'first_tonic'):
             bounds.add(1)
         self.bounds = tuple(sorted(bounds))
         dim = attention.config.dim
@@ -172,6 +174,9 @@ class LoopedFlyLM(FlyLM):
         l = self.loop
         current = self.interfaces.input_current(ids)
         silent = torch.zeros_like(current)
+        if l.token_injection == 'first_tonic':
+            # the injector on a zero vector gives its token-independent part (bias on the ports; tanh(0) = 0)
+            silent = self.interfaces.input(current.new_zeros(ids.shape[0], self.interfaces.config.dim))
         embedded = self.interfaces.input_norm(self.interfaces.embedding(ids)) if (self.reads and l.inject == 'concat') else None
         vs = (state.voltage, state.spike)
         feedback = None
