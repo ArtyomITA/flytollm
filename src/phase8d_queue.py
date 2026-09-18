@@ -6,7 +6,7 @@ per code family. Runs by phase8c_queue.main() before its own runs (chained after
 import ctypes, json, time
 import pretrain_night_queue as q
 from bench_runtime import ROOT
-from phase8b_queue import DEFAULT
+from phase8b_queue import DEFAULT, diagnostic
 
 STOP = ROOT / 'STOP_PHASE7'
 T8 = ['--pre-steps', 8, '--post-steps', 8]
@@ -26,9 +26,14 @@ RUNS = [
     # E2: output scale, 8+8
     ('phase8_E2_outscale01_T8_2000', T8 + ['--output-scale', 0.1], 'outscale'),
     ('phase8_E2_outscale001_T8_2000', T8 + ['--output-scale', 0.01], 'outscale'),
+    # E5 (added 18 September 02:40 after the E0 panel: synaptic gradient SNR 0.22 = pure noise at 2 lanes x 16 tokens):
+    # Adam on core.raw applied every 16 updates on the gradient summed over those 16 (effective batch x16 for the
+    # synapses only), synaptic lr 3e-3 (the approved value), 8+8; a short added to the tail, the runs above are unchanged
+    ('phase8_E5_accum16_T8_2000', T8 + ['--core-lr', 3e-3, '--core-accumulate', 16], 'accum'),
 ]
 SMOKES = dict(coreonly=CORE_ONLY + ['--core-lr', 1e-2, '--core-variant', 'soft_gw'], fluct=T8 + ['--init-norm', 'fluct', '--weight-scale', 2.2],
-              iface=T8 + ['--interface-lr', 1e-6, '--muon-lr', 1e-5, '--core-lr', 3e-3], outscale=T8 + ['--output-scale', 0.01])
+              iface=T8 + ['--interface-lr', 1e-6, '--muon-lr', 1e-5, '--core-lr', 3e-3], outscale=T8 + ['--output-scale', 0.01],
+              accum=T8 + ['--core-lr', 3e-3, '--core-accumulate', 16])
 
 
 def done(run):
@@ -71,6 +76,11 @@ def main():
                 q.run_job(state, name, 'pretrain_control', DEFAULT + extra + ['--updates', 2000, '--checkpoint-every', 2000], 21600)
             except RuntimeError as exc:
                 state['failed'].append(dict(name=name, error=str(exc))); q.write_state(state)
+        # 18 September 02:45 (added after the E0 panel on K8; the runs above are unchanged): the same panel on every
+        # checkpoint of this queue and on the 8+8 reference L4, ~1.5 min each: did the regime (E1 init, E2 scale, E3 slow
+        # interfaces, E4 core only, E5 accumulation) change excitability, gradient SNR or where the weights move?
+        for run in ['phase8_L4_T8_2000'] + [name for name, _, _ in RUNS]:
+            diagnostic(state, ROOT / 'results' / f'{run}.latest.pt', run.replace('phase8_', ''), script='phase8_e0_panel.py', prefix='e0', extra=('--run', run))
         state.update(status='completed'); q.write_state(state)
     except InterruptedError as exc:
         state.update(status='stopped', reason=str(exc)); q.write_state(state); raise

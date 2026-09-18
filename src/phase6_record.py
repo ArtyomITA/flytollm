@@ -151,6 +151,7 @@ RUNS = {
     'phase8_E3_slow_iface100_T8_2000': ('### P3 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
     'phase8_E2_outscale01_T8_2000': ('### P4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
     'phase8_E2_outscale001_T8_2000': ('### P4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    'phase8_E5_accum16_T8_2000': ('### P5 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
     # phase 8e (SUITE section Q): input channels by modality; P1-P3 are re-referenced to P0 once it exists
     'phase8_P0_anatomical_T8_2000': ('### Q0 ', 4.187, 'porte random + 8+8 (L4) 4,187'),
     'phase8_P1_modal_channels_T8_2000': ('### Q1 ', 4.187, 'porte random + 8+8 (L4) 4,187; riferimento vero = P0 quando esiste'),

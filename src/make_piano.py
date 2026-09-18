@@ -20,7 +20,7 @@ RESULT = {
     'C15': "FATTO: sinapsi rimesse all'init su K8: 3,5407 → 3,5401 (0,0006). Il nucleo è un reservoir fisso; l'apprendimento sta nelle interfacce.",
     'C14': 'FATTO: passo sinaptico 1e-3 / 1e-2 a 4+4: 4,275 / 4,276 (= 4,275); a 8+8 1e-2: 4,202 vs L4 4,187 (rumore). Pesi mossi 1,4% / 14,6%: si muovono, la CE non cambia.',
     'C13': 'FATTO: caricatore universale delle varianti (phase8_load_variant.py): K5 ricostruito, CE DEV 4,1529 = 4,152. Suite di inferenza su ogni variante.',
-    'C16': 'IN CORSO: gradiente allargato da solo a 8+8: 4,183 vs L4 4,187 (rumore) con archi mossi 10,5% vs 2,5%; con passo 1e-3: 4,185, pesi mossi 3,2% (×18), archi 20,6%; con 1e-2 in coda.',
+    'C16': 'FATTO: gradiente allargato a 8+8 con passo 1e-4 / 1e-3 / 1e-2: 4,183 / 4,185 / 4,200 vs L4 4,187 (tutto rumore) con pesi mossi 0,4% / 3,2% / 27,8% e archi mossi 10,5% / 20,6% / 30,4%: la CE non dipende dal movimento sinaptico. Famiglia chiusa.',
 }
 # ---- terse technical notes (caveman ultra, for the assistant)
 NOTES = {
@@ -42,7 +42,7 @@ NOTES = {
     'C15': 'K8 4+4 8k: trained 3,5407 · all-init 3,5401 · moved-init 3,5395 · unmoved-init 3,5494 (Δ 0,009: i pesi NON mossi contano più dei mossi = rumore di init). ol_intrinsic 89k neuroni 17,6% attivi, 0,24% archi mossi. bug closure fixato (record.add_).',
     'C14': '4+4: 1e-3 4,275 · 1e-2 4,276 (dw 1,4% / 14,6%). T8 1e-2: 4,202 vs 4,187 (+0,015 rumore). movimento ∝ lr, CE piatta: loss piatta lungo direzioni sinaptiche.',
     'C13': 'VariantSuite = Suite con base.load_payload patchato; build_control_cns fast_mode off + control da worker.json; src32/dst32 droppati; strict load. 0,9 min.',
-    'C16': 'T8 soft_gw: 4,183 vs 4,187. dw 0,38% vs 0,18% (×2,2), moved 10,5% vs 2,5% (×4), grad 6,4/6,3, spike 0,0542 uguale. 708 ms vs 680 (+4%). copertura ≠ collo di bottiglia (3ª conferma: M0, C14, C16).',
+    'C16': 'T8 soft_gw lr 1e-4/1e-3/1e-2: CE 4,183/4,185/4,200; dw 0,38/3,24/27,8%; moved 10,5/20,6/30,4%; max 0,01/0,09/1,65; spike 0,0542/0,0538/0,0515; grad 6,4/6,4/6,2. 708 ms (+4%). E0: SNR grad 0,22 = rumore → Adam random walk ∝ lr. copertura e passo ≠ cura.',
 }
 
 

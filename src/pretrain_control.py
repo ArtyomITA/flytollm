@@ -263,6 +263,7 @@ def main():
     p.add_argument('--core-variant', type=core_variant_arg, default='lif', help="one of %s or several joined by '+', e.g. bias_type+tau_type+reversal" % (VARIANTS,))
     p.add_argument('--weight-scale', type=float, default=1.0, help='multiply the initial synaptic magnitudes by this factor (phase 7c, global scale lever)')
     p.add_argument('--type-param-lr', type=float, default=None, help='dedicated Adam learning rate for the per-cell-type parameters (leak_logit, bias_type); default = same as the rest')
+    p.add_argument('--core-accumulate', type=int, default=0, help='E5 (phase 8): Adam on core.raw applied every N updates on the gradient summed over those N updates (effective batch x N for the synapses only; needs --optimizer muon and --core-lr)')
     p.add_argument('--core-lr', type=float, default=None, help='dedicated Adam learning rate for the synaptic weights (core.raw); phase 8: at 1e-4 the 2.75 M weights move 0.3%% in 8000 updates')
     p.add_argument('--optimizer', choices=['adam', 'muon'], default='adam', help='muon = Moonlight-style Muon on the dense nn.Linear matrices (attention q/k/v/o, readout projection), Adam on the rest (phase 7e)')
     p.add_argument('--muon-lr', type=float, default=1e-4, help='Muon base learning rate; effective per matrix = base * 0.2 * sqrt(max(shape))')
@@ -376,21 +377,30 @@ def main():
                     iface = [p for p in params if id(p) not in core_ids and named_.get(id(p)) not in matrices]
                     groups.append((iface, float(a.interface_lr)))
                     holder['stats']['interface_lr'] = dict(lr=float(a.interface_lr), tensors=len(iface))
+                accumulate = None
                 if a.core_lr is not None:
                     raw = [p for p in params if p is holder['model'].core.raw]
                     if not raw:
                         raise RuntimeError('core-lr given but core.raw is not a trainable parameter')
-                    same = [g for g in groups if g[1] == float(a.core_lr)]
-                    if same:
-                        same[0][0].extend(raw)
+                    if a.core_accumulate:
+                        if a.optimizer != 'muon':
+                            raise RuntimeError('core-accumulate is implemented in HybridMuon only (--optimizer muon)')
+                        accumulate = (raw, float(a.core_lr), int(a.core_accumulate))
+                        holder['stats']['core_lr'] = dict(lr=float(a.core_lr), values=int(raw[0].numel()), accumulate=int(a.core_accumulate))
                     else:
-                        groups.append((raw, float(a.core_lr)))
-                    holder['stats']['core_lr'] = dict(lr=float(a.core_lr), values=int(raw[0].numel()))
+                        same = [g for g in groups if g[1] == float(a.core_lr)]
+                        if same:
+                            same[0][0].extend(raw)
+                        else:
+                            groups.append((raw, float(a.core_lr)))
+                        holder['stats']['core_lr'] = dict(lr=float(a.core_lr), values=int(raw[0].numel()))
+                elif a.core_accumulate:
+                    raise RuntimeError('core-accumulate needs --core-lr')
                 if a.optimizer == 'muon':
                     from optimizer_variants import HybridMuon
                     kw.pop('fused', None)
                     opt = HybridMuon(holder['model'], params, kw.pop('lr'), a.muon_lr, include_head=a.muon_head,
-                                     adam_groups=groups or None, adam_cls=original_adam, foreach=False, **kw)
+                                     adam_groups=groups or None, adam_cls=original_adam, accumulate=accumulate, foreach=False, **kw)
                     holder['stats']['optimizer'] = dict(kind='muon', muon_lr=float(a.muon_lr), matrices=opt.matrix_names,
                                                         matrix_values=int(sum(p.numel() for p in opt.matrices)))
                     return opt
@@ -420,7 +430,7 @@ def main():
                                    pre_steps=a.pre_steps, post_steps=a.post_steps, weight_scale=a.weight_scale, type_param_lr=a.type_param_lr,
                                    optimizer=a.optimizer, muon_lr=a.muon_lr if a.optimizer == 'muon' else None,
                                    attn_reads=a.attn_reads, attn_kv=a.attn_kv, attn_step_id=a.attn_step_id, attn_inject=a.attn_inject,
-                                   token_injection=a.token_injection, freeze_core=a.freeze_core, core_lr=a.core_lr, depth_schedule=a.depth_schedule, homeo=a.homeo, arousal=a.arousal,
+                                   token_injection=a.token_injection, freeze_core=a.freeze_core, core_lr=a.core_lr, core_accumulate=a.core_accumulate, depth_schedule=a.depth_schedule, homeo=a.homeo, arousal=a.arousal,
                                    init_norm=a.init_norm, output_scale=a.output_scale, interface_lr=a.interface_lr, init_from=a.init_from, freeze_interfaces=a.freeze_interfaces,
                                    port_channels=a.port_channels, port_encoder=a.port_encoder, gain_groups=a.gain_groups, ports_seed=a.ports_seed, ports_count=a.ports_count,
                                    stats=holder['stats'],

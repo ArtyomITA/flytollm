@@ -8,6 +8,8 @@ Utente a dormire dalle 02:17. Catena automatica: 8b2 (25 run a 8+8 sulla base de
 |---|---|---|---|---|---|
 | 02:03 | C16 gradiente allargato (soft_gw) a 8+8 | 4,183 | L4 4,187 | −0,004 | rumore; archi mossi 10,5% vs 2,5%: copertura ×4, CE ferma (3ª conferma dopo M0 e C14) |
 | 02:29 | C16 + passo sinaptico 1e-3 a 8+8 | 4,185 | L4 4,187 | −0,002 | rumore; pesi mossi 3,2% (×18), archi mossi 20,6% (×8): le sinapsi si muovono molto, CE identica = loss piatta lungo le sinapsi (regime lazy confermato) |
+| 03:04 | C16 + passo sinaptico 1e-2 a 8+8 | 4,200 | L4 4,187 | +0,013 | rumore; pesi mossi 27,8% (×160), archi 30,4%, spike −5%: CE indipendente dal movimento sinaptico su 3 ordini di grandezza (serie 1e-4/1e-3/1e-2: 4,183/4,185/4,200). Famiglia C14/C16 chiusa: passo e copertura non curano |
+| 03:33 | N1 due letture dell'attention per token (sottopassi 4 e 12) a 8+8 | 4,196 | L4 4,187 | +0,009 | rumore; +6% di costo. Una seconda rilettura del contesto dentro il giro non aggiunge nulla |
 
 ## Diagnostiche della notte
 
@@ -19,6 +21,8 @@ Utente a dormire dalle 02:17. Catena automatica: 8b2 (25 run a 8+8 sulla base de
 - `phase8_modality_lesion.py`: lesione per senso a inferenza (modo info / silence, controllo random), in coda 8e dopo P0/P1 (~15 min l'una).
 - `phase8_e0_panel.py`: pannello E0 (eccitabilità xi/sigma per neurone, passo effettivo sigmoid(raw), SNR del gradiente su 16 campioni, dove si muovono i pesi).
 - `phase8_load_variant.py`: C13, carica qualsiasi checkpoint di variante per inferenza (VariantSuite).
+- Pannello E0 esteso alle varianti (`--run`, init a fluttuazione riconosciuta) e aggiunto in fondo alla coda 8d su L4 e su tutti i checkpoint 8d (E1, E2, E3, E4, E5; ~1,5 min l'uno): misura se ogni regime cambia eccitabilità, SNR del gradiente e dove si muovono i pesi.
+- `--core-accumulate N` in `pretrain_control.py` / `HybridMuon`: Adam sulle sinapsi ogni N update sul gradiente sommato (E5), capture-safe, self-test 10.
 - Pagina Pages: slide 7 corretta (+0,18 / +0,12); da pushare.
 
 ## Proposte in attesa di decisione (non applicate)
@@ -27,8 +31,9 @@ Utente a dormire dalle 02:17. Catena automatica: 8b2 (25 run a 8+8 sulla base de
 2. B10 reservoir: tenere (controllo pulito, 27 min).
 3. H6/H7 wake_learn: leggere come test di copertura; se vince E2 o E3 aggiungere H6' = wake + regime vincente.
 4. Corti da aggiungere dopo 8d: E2+E3 insieme; E1 + bilanciamento E/I se E1 instabile.
-5. E5 (nuova, da E0): accumulo del gradiente di core.raw su 16 update (SNR ×4) sopra E1, 8+8, 2000 update, 27 min.
+5. E5 (nuova, da E0): accumulo del gradiente di core.raw su 16 update (SNR ×4), passo 3e-3, 8+8: AGGIUNTA in fondo alla coda 8d (`phase8_E5_accum16_T8_2000`, 27 min, self-test superato); E5 + E1 da decidere dopo il risultato di E1.
 
 ## Problemi della notte
 
-(nessuno finora)
+- 03:05: tre smoke di 8b2 FALLITI (shock, homeo, arousal) → la coda ha SALTATO N6d (shock di profondità), H1 (omeostasi 8+8), H2/H3 (arousal), H4 (omeostasi 12+12). Cause trovate: (1) `current_depth()` indicizzava con un tensore 0-dim = sync host, vietato dentro la cattura del CUDA Graph; (2) `FairCapture.restore()` ripristinava i parametri ma non i buffer che si muovono in allenamento (scarti omeostatici, contatori di arousal e di schedule): passo eager e replay partivano da stati diversi, controllo di equivalenza fallito. Fix 03:10: indice con tensore a 1 elemento (`fly_lm_variants.py`), ripristino anche dei buffer (`phase3_t45.py`, nessun effetto sui modelli con buffer costanti = tutte le run precedenti; il file è nel fingerprint dei checkpoint, quindi i checkpoint salvati prima non sono più ripristinabili con --resume: nessuna coda lo usa). Self-test CPU ok. Smoke rifatti nella pausa di coda dopo N1 (03:34-03:39): shock, homeo, arousal tutti OK (135 / 90 / 84 s). Le 5 run saltate vengono rieseguite in fondo alla catena (aggiunto in `phase8c_queue.py`: rilancio di 8b2 sulle run non fatte). Costo dell'incidente: ~8 min di GPU ferma per le pause, 5 run spostate in fondo (~2,5 h in più alla catena).
+

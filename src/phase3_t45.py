@@ -27,9 +27,15 @@ class FairCapture:
         self.ids=x.clone();self.targets=y.clone();self.state=model.initial_state(2);self.empty=model.initial_state(2)
         self.opt=opt=torch.optim.Adam(model.parameters(),lr=.0001,capturable=True,foreach=False)
         initial=[p.detach().clone() for p in model.parameters()]
+        # phase 8 (18 September 2026): buffers that move during training (homeostatic threshold offsets, arousal and
+        # depth-schedule counters of the control variants) are restored too, otherwise the eager reference step and
+        # the replayed graph run from different buffer states and the equivalence check fails; no effect on models
+        # whose buffers are constant (every run before this date)
+        initial_buffers=[b.detach().clone() for b in model.buffers()]
         def restore():
             with torch.no_grad():
                 for p,v in zip(model.parameters(),initial):p.copy_(v)
+                for b,v in zip(model.buffers(),initial_buffers):b.copy_(v)
                 for s in opt.state.values():
                     for v in s.values():v.zero_()
             opt.zero_grad(set_to_none=False);self.reset()

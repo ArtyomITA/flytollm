@@ -10,7 +10,8 @@ non-learning core dominates. Inference plus a few gradient samples on one plain-
   4. where the weights moved (causes 1-2, lazy regime / starvation): Spearman correlation of |delta w| (vs init) with the
      source rate, the target rate, |mean gradient| and w0; share of the total |delta w| carried by the synapses whose
      source is among the 10% most active neurons; synapses moved (> 1e-4) among those with a silent source
-Run (GPU idle, ~3 min): .venv/Scripts/python.exe phase8_e0_panel.py --checkpoint-path results/<run>.latest.pt --output results/phase8_e0_<tag>.json"""
+Run (GPU idle, ~1 min): .venv/Scripts/python.exe phase8_e0_panel.py --checkpoint-path results/<run>.latest.pt --output results/phase8_e0_<tag>.json
+With --run <name> the model is rebuilt through phase8_load_variant (any variant, init_norm / weight_scale read from the run's control record)."""
 import argparse, json, time
 from pathlib import Path
 import numpy as np, torch
@@ -95,14 +96,29 @@ def main():
     p.add_argument('--rewire-seed', type=int, default=41)
     p.add_argument('--weight-scale', type=float, default=1.0)
     p.add_argument('--grad-samples', type=int, default=16)
+    p.add_argument('--run', default=None, help='result name: load through phase8_load_variant.VariantSuite and take init_norm / weight_scale / graph from its control record')
     a = p.parse_args(); started = time.time()
-    path = Path(a.checkpoint_path); suite = Suite(path.stem, path); model = suite.model; core = model.core; n = core.n
+    path = Path(a.checkpoint_path)
+    init_norm = 'sum'
+    if a.run:
+        from phase8_load_variant import VariantSuite
+        suite = VariantSuite(a.run, a.checkpoint_path); c = suite.control
+        a.kind, a.rewire_seed, a.weight_scale, init_norm = c['rewire_kind'], c['rewire_seed'], float(c.get('weight_scale', 1.0)), c.get('init_norm', 'sum')
+    else:
+        suite = Suite(path.stem, path)
+    model = suite.model; core = model.core; n = core.n
+    if getattr(core, 'flags', None):
+        raise SystemExit(f'E0 re-implements the plain LIF substeps; core variant {sorted(core.flags)} would be measured with the wrong dynamics')
     data, _ = load_control_graph(10, a.rewire_seed, a.kind)
     assert np.array_equal(core.src.cpu().numpy(), data['src']) and np.array_equal(core.dst.cpu().numpy(), data['dst']), 'checkpoint graph differs'
     counts = np.log1p(data['weight']); incoming = np.bincount(data['dst'], weights=counts, minlength=n)
-    magnitude = torch.from_numpy((a.weight_scale * .5 * counts / np.maximum(incoming[data['dst']], 1)).astype(np.float32)).cuda()
+    if init_norm == 'fluct':  # E1: same formula as pretrain_control.build_control_cns
+        incoming_sq = np.bincount(data['dst'], weights=counts ** 2, minlength=n)
+        magnitude = torch.from_numpy((a.weight_scale * counts / np.sqrt(np.maximum(incoming_sq[data['dst']], 1e-12))).astype(np.float32)).cuda()
+    else:
+        magnitude = torch.from_numpy((a.weight_scale * .5 * counts / np.maximum(incoming[data['dst']], 1)).astype(np.float32)).cuda()
     raw0 = magnitude + torch.log(-torch.expm1(-magnitude))
-    out = dict(checkpoint=str(path), depth=[model.config.pre_steps, model.config.post_steps], neurons=n, synapses=int(core.raw.numel()))
+    out = dict(checkpoint=str(path), run=a.run, init_norm=init_norm, weight_scale=a.weight_scale, depth=[model.config.pre_steps, model.config.post_steps], neurons=n, synapses=int(core.raw.numel()))
 
     # 1. excitability
     stats = {key: torch.zeros(n, device='cuda') for key in ('sum', 'sq', 'near', 'spikes')}; stats['count'] = 0.

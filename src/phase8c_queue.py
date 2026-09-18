@@ -84,6 +84,16 @@ def main():
                 q.run_job(state, name, 'pretrain_control', DEFAULT + extra + ['--updates', updates, '--checkpoint-every', 2000], timeout)
             except RuntimeError as exc:
                 state['failed'].append(dict(name=name, error=str(exc))); q.write_state(state)
+        # 18 September 03:15: the 8b2 runs skipped after the three failed smokes (N6d depth shock, H1-H4 homeo/arousal;
+        # capture bugs fixed at 03:10 and smoke-tested in a queue pause) are re-run here, at the end of the chain;
+        # phase8b2_queue is resumable but refuses a 'completed' state file, so it is renamed first
+        import phase8b2_queue
+        live = ROOT / 'results/phase8b2_live.json'
+        if live.exists() and json.loads(live.read_text()).get('status') == 'completed' and not all(phase8b2_queue.done(r[0]) for r in phase8b2_queue.RUNS):
+            state.update(status='completed'); q.write_state(state)
+            live.replace(live.with_name(f'phase8b2_live.done_{int(time.time())}.json'))
+            phase8b2_queue.main()
+            q.STATE = ROOT / 'results/phase8c_live.json'
         state.update(status='completed'); q.write_state(state)
     except InterruptedError as exc:
         state.update(status='stopped', reason=str(exc)); q.write_state(state)

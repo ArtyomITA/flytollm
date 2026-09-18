@@ -125,7 +125,9 @@ class LoopedFlyLM(FlyLM):
 
     def current_depth(self):
         phase = (self.calls >= self.schedule_starts).sum() - 1
-        return self.schedule_depths[phase]
+        # index with a 1-element tensor: a 0-dim tensor index is converted to a Python int (device sync), which is
+        # not permitted inside CUDA Graph capture (smoke_shock, 18 September 03:05); the result has shape [1]
+        return self.schedule_depths[phase.reshape(1)]
 
     def forward(self, ids, state=None, active=None, reset=None):
         out = super().forward(ids, state, active, reset)

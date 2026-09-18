@@ -217,8 +217,36 @@ def check_port_variants():
     print('9b. type-shared injector: 7 shared channels of fan-in 8, forward finite, gradient on the shared weights: ok')
 
 
+def check_accumulated_adam():
+    """10. E5: HybridMuon with an accumulated group applies Adam to the gradient summed over `every` updates, only on
+    every `every`-th update, and matches a plain Adam fed with the averaged gradient."""
+    from optimizer_variants import HybridMuon
+    torch.manual_seed(3)
+    class Tiny(torch.nn.Module):
+        def __init__(self):
+            super().__init__(); self.lin = torch.nn.Linear(8, 8); self.raw = torch.nn.Parameter(torch.randn(50)); self.bias = torch.nn.Parameter(torch.zeros(8))
+    model = Tiny(); every = 4
+    reference = torch.nn.Parameter(model.raw.detach().clone())
+    opt = HybridMuon(model, list(model.parameters()), 1e-3, 1e-3, adam_groups=None, accumulate=([model.raw], 1e-2, every), betas=(.9, .999), eps=1e-8, capturable=False, foreach=False)
+    ref_opt = torch.optim.Adam([reference], lr=1e-2, betas=(.9, .999), eps=1e-8)
+    grads = [torch.randn(50) for _ in range(3 * every)]
+    for i, g in enumerate(grads):
+        before = model.raw.detach().clone()
+        opt.zero_grad(); x = torch.randn(4, 8); (model.lin(x).sum() + (model.raw * g).sum() + model.bias.sum()).backward(); opt.step()
+        moved = not torch.equal(before, model.raw.detach())
+        assert moved == ((i + 1) % every == 0), (i, moved)
+        if (i + 1) % every == 0:
+            ref_opt.zero_grad(); reference.grad = torch.stack(grads[i + 1 - every:i + 1]).mean(0); ref_opt.step()
+            assert torch.allclose(model.raw.detach(), reference.detach(), atol=1e-6), (i, (model.raw.detach() - reference.detach()).abs().max())
+    st = opt.acc_state[model.raw]
+    assert float(st['step']) == 3 * every and float(st['applied']) == 3 and float(st['acc'].abs().sum()) == 0
+    assert model.raw not in opt.adam.state and 'accumulated' in opt.state_dict()
+    print(f'10. accumulated Adam (E5): raw moves only every {every} updates and equals Adam on the averaged gradient; step counter = updates: ok')
+
+
 if __name__ == '__main__':
     torch.manual_seed(0)
+    check_accumulated_adam()
     check_port_variants()
     check_output_scale_and_freeze()
     check_separate_head()
