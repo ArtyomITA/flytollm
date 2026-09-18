@@ -10,6 +10,14 @@ Utente a dormire dalle 02:17. Catena automatica: 8b2 (25 run a 8+8 sulla base de
 | 02:29 | C16 + passo sinaptico 1e-3 a 8+8 | 4,185 | L4 4,187 | −0,002 | rumore; pesi mossi 3,2% (×18), archi mossi 20,6% (×8): le sinapsi si muovono molto, CE identica = loss piatta lungo le sinapsi (regime lazy confermato) |
 | 03:04 | C16 + passo sinaptico 1e-2 a 8+8 | 4,200 | L4 4,187 | +0,013 | rumore; pesi mossi 27,8% (×160), archi 30,4%, spike −5%: CE indipendente dal movimento sinaptico su 3 ordini di grandezza (serie 1e-4/1e-3/1e-2: 4,183/4,185/4,200). Famiglia C14/C16 chiusa: passo e copertura non curano |
 | 03:33 | N1 due letture dell'attention per token (sottopassi 4 e 12) a 8+8 | 4,196 | L4 4,187 | +0,009 | rumore; +6% di costo. Una seconda rilettura del contesto dentro il giro non aggiunge nulla |
+| 04:25 | N2 attention a ogni sottopasso (16 letture, cache per lettura, step id, concat) a 8+8 | 4,178 | L4 4,187 | −0,009 | rumore; costo ×1,8 (1.216 ms/update), 5,6 M parametri; parte peggio e chiude appena sotto. Rileggere il contesto dentro il giro non aggiunge informazione |
+| 04:51 | N5 token iniettato solo al primo sottopasso a 8+8 | 4,914 | L4 4,187 | **+0,727** | senza corrente tonica la rete tace (spike ×0,01): l'input injection sostenuta è il supporto vitale della dinamica. Confondente: toglie anche il bias tonico 0,6; proposta N5b (bias sempre, token solo al primo) |
+| 05:20 | M4 porte a conduttanza a 8+8 | 4,188 | L4 4,187 | +0,001 | nulla; +11% costo. La conduttanza pagava sulle sinapsi ricorrenti, non sugli ingressi |
+| 06:07 | A2.7.2 guadagno esterno per superclasse (lr 1e-2) a 8+8 | 4,198 | L4 4,187 | +0,011 | rumore; costo ×1,9. Il modello alza la corrente ×2 su cb/vnc/ol intrinsic e cb_sensory, la inverte su sensory_ascending; spike +35% ma CE ferma: più eccitazione da sola non basta |
+| 06:33 | B2.5.3a nucleo identità (sinapsi spente e congelate, neuroni isolati) a 8+8 | 5,864 | L4 4,187 | **+1,677** | pavimento senza grafo: il cablaggio vale 1,68 nat come reservoir fisso (C15: allenarlo vale 0,0006). Il grafo espande l'ingresso, le interfacce leggono |
+| 06:56 | B10 reservoir (sinapsi reali congelate all'init) a 8+8 | 4,182 | L4 4,187 | −0,005 | identico al nucleo allenato, −6% costo. Quadro completo: grafo assente 5,864 · grafo fisso 4,182 · grafo allenato 4,187 |
+| 07:22 | N4 due letture senza identificativo di passo a 8+8 | 4,198 | N1 4,196 / L4 4,187 | +0,002 / +0,011 | rumore: lo step id vale zero perché le letture ripetute non aggiungono nulla |
+| 08:03 | N3 attention a ogni sottopasso con cache della prima lettura a 8+8 | 4,186 | N2 4,178 / L4 4,187 | +0,008 / −0,001 | rumore; costo ×1,66. Famiglia N chiusa: attention nel giro neutra (N1-N4 entro ±0,011), conta solo la corrente d'ingresso sostenuta (N5) |
 
 ## Diagnostiche della notte
 
@@ -32,6 +40,7 @@ Utente a dormire dalle 02:17. Catena automatica: 8b2 (25 run a 8+8 sulla base de
 3. H6/H7 wake_learn: leggere come test di copertura; se vince E2 o E3 aggiungere H6' = wake + regime vincente.
 4. Corti da aggiungere dopo 8d: E2+E3 insieme; E1 + bilanciamento E/I se E1 instabile.
 5. E5 (nuova, da E0): accumulo del gradiente di core.raw su 16 update (SNR ×4), passo 3e-3, 8+8: AGGIUNTA in fondo alla coda 8d (`phase8_E5_accum16_T8_2000`, 27 min, self-test superato); E5 + E1 da decidere dopo il risultato di E1.
+6. N5b (nuova, da N5): bias tonico dell'iniettore a ogni sottopasso, parte dipendente dal token solo al primo sottopasso; 8+8, 27 min: separa 'informazione ripetuta' da 'corrente vitale'.
 
 ## Problemi della notte
 
