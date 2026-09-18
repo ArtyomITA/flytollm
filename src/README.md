@@ -42,6 +42,11 @@ Copia dei sorgenti del progetto (17 settembre 2026, sera). Percorsi relativi all
 - `phase8_coverage.py` — quanto cervello impara: variazione relativa dei pesi sinaptici, archi mossi, scarti di soglia, leak.
 - `phase8_c15_revert_weights.py` — CE di un checkpoint con le sinapsi rimesse ai valori iniziali.
 - `phase8_n0_diagnostic.py`, `phase8_depth_transfer.py` — cosa cambia fra letture ipotetiche dell'attention; trasferimento fra profondità a inferenza.
+- `fly_interfaces_variants.py` — canali d'ingresso per modalità sensoriale (P1), encoder condiviso per tipo cellulare (P2), neuroni di convergenza multisensoriale come porte (P4).
+- `phase8d_queue.py`, `phase8e_queue.py`, `phase8c_queue.py`, `phase8b2_queue.py` — code dei corti a 8+8 (8b2), far imparare il nucleo E1-E4 (8d), canali per modalità P0-P4b (8e), corti a 12+12 e lunghe a 8000 (8c); catena automatica 8b2 → 8d → 8e → 8c.
+- `phase8_e0_panel.py` — pannello E0: eccitabilità per neurone (distanza dalla soglia, sigma del potenziale, finestra del gradiente surrogato), passo effettivo della softplus, rapporto segnale/rumore del gradiente sinaptico, dove si muovono i pesi.
+- `phase8_modality_lesion.py` — lesione per senso a inferenza (informazione tolta o senso spento, controllo random a pari porte).
+- `phase8_load_variant.py` — caricatore universale dei checkpoint delle varianti per l'inferenza (`VariantSuite`).
 
 ## Fasi precedenti
 - `phase3_*`, `phase35_*`, `verify_*`, `test_*`, `summarize_*`, `bench_throughput.py`, `train_diagnostic.py`, `graph_specialization_probe.py`, `analyze_graph_specialization.py`, `anatomy_fanout_tests.py`, `audit_step0.py`, `generate_phase35.py` — diagnostica, verifiche e test unitari delle fasi 2-3 (vedi `reports/PIANO_FASI.md`).

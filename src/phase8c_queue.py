@@ -58,8 +58,9 @@ def main():
 
     try:
         # 18 September 01:45: the core-learning experiments (section P, phase8d_queue) run BEFORE the 8c runs
-        import phase8d_queue
+        import phase8d_queue, phase8e_queue
         phase8d_queue.main()
+        phase8e_queue.main()   # section Q: input channels by modality (user yes, 18 September 01:45)
         q.STATE = ROOT / 'results/phase8c_live.json'
         k8 = ROOT / 'results/phase7_promote_muon1e3_8000.latest.pt'
         diagnostic(state, k8, 'default8000_v2', script='phase8_c15_revert_weights.py', prefix='c15', extra=('--kind', 'relthr'))

@@ -4,7 +4,7 @@ from pathlib import Path
 from bench_runtime import ROOT, emit, memory, supervise
 import pretrain_resumable as base
 
-CONTROL_SOURCES = ['pretrain_control.py', 'fly_rewire.py', 'fly_graph.py', 'fly_core_variants.py', 'fly_core_fast.py', 'fly_lm_variants.py', 'optimizer_variants.py']
+CONTROL_SOURCES = ['pretrain_control.py', 'fly_rewire.py', 'fly_graph.py', 'fly_core_variants.py', 'fly_core_fast.py', 'fly_lm_variants.py', 'optimizer_variants.py', 'fly_interfaces_variants.py']
 
 
 ANNOTATIONS = ROOT / 'dataset/male_cns/body-annotations-male-cns-v1.0.feather'
@@ -24,9 +24,16 @@ def node_column(body_ids, column):
     return t[column].reindex(np.asarray(body_ids)).fillna('').astype(str).to_numpy()
 
 
-def variant_ports(body_ids, sensory, read_nodes, ports, seed=17, count=None):
+def variant_ports(body_ids, sensory, read_nodes, ports, seed=17, count=None, graph=None):
     import numpy as np, torch
     n = len(body_ids)
+    if ports == 'convergent':
+        # P4 (phase 8): the neurons reached by every sensory modality within 3 synapses (multisensory convergence zones)
+        from fly_interfaces_variants import convergent_nodes
+        cls = node_column(body_ids, 'class'); sup = node_column(body_ids, 'superclass')
+        chosen = convergent_nodes(graph['src'], graph['dst'], n, cls, sup, sensory.numpy(), hops=4)   # 3 hops: 204 nodes on relthr; 4 hops: 8,129
+        chosen = np.setdiff1d(chosen, read_nodes.numpy())
+        return torch.from_numpy(chosen.astype(np.int64)), dict(ports='convergent', count=int(len(chosen)), hops=4, overlap_with_anatomical=float(np.isin(chosen, sensory.numpy()).mean()))
     if ports == 'anatomical':
         return sensory, dict(ports='anatomical', count=int(sensory.numel()))
     if ports == 'random_matched':
@@ -127,7 +134,7 @@ def core_variant_arg(value):
 
 def build_control_cns(threshold, seed, kind='degree', ports='anatomical', readout='chunks', core_variant='lif', fast_mode='off', chunk=262144, index_dtype='int64',
                       pre_steps=4, post_steps=4, weight_scale=1.0, loop=None, freeze_core=False, ports_seed=17, ports_count=None, homeo=None, arousal=None,
-                      init_norm='sum'):
+                      init_norm='sum', port_channels='mixed', port_encoder='node', gain_groups='superclass'):
     import numpy as np, torch
     from fly_core import Core
     from fly_core_variants import parse_variant
@@ -181,7 +188,13 @@ def build_control_cns(threshold, seed, kind='degree', ports='anatomical', readou
             _, index = np.unique(node_column(data['body_ids'], 'type'), return_inverse=True)
             kwargs['type_index'] = torch.from_numpy(index.astype(np.int64))
         if 'gain_group' in flags:
-            names, index = np.unique(node_column(data['body_ids'], 'superclass'), return_inverse=True)
+            if gain_groups == 'modality':
+                from fly_interfaces_variants import modality_index, MODALITIES
+                sens0, _, _, _ = anatomical_ports(data['body_ids'], ANNOTATIONS)
+                index = modality_index(node_column(data['body_ids'], 'class'), node_column(data['body_ids'], 'superclass'), sens0.numpy())
+                names = ['non porta'] + list(MODALITIES)
+            else:
+                names, index = np.unique(node_column(data['body_ids'], 'superclass'), return_inverse=True)
             kwargs['group_index'] = torch.from_numpy(index.astype(np.int64))
             extra['gain_groups'] = [str(x) for x in names]
         core = VariantCore(*args, core_variant, **kwargs)
@@ -190,12 +203,24 @@ def build_control_cns(threshold, seed, kind='degree', ports='anatomical', readou
     if readout in ('fru', 'hub', 'cx'):
         read_nodes, groups, readout_info = variant_readout(data['body_ids'], data['src'], data['dst'], sensory, read_nodes, groups, readout)
         extra['readout'] = readout_info
-    sensory, port_info = variant_ports(data['body_ids'], sensory, read_nodes, ports, seed=ports_seed, count=ports_count)
+    sensory, port_info = variant_ports(data['body_ids'], sensory, read_nodes, ports, seed=ports_seed, count=ports_count, graph=data)
     extra['ports'] = port_info
     if readout == 'anatomical':
         groups, readout_info = anatomical_readout_groups(data['body_ids'], read_nodes)
         extra['readout'] = readout_info
     interfaces = TextInterfaces(n, sensory, read_nodes, groups)
+    if port_channels == 'modal' or port_encoder == 'type':
+        from fly_interfaces_variants import modality_index, modal_channels_, TypeSharedInjector
+        cls_all = node_column(data['body_ids'], 'class'); sup_all = node_column(data['body_ids'], 'superclass')
+        if port_channels == 'modal':
+            modality = modality_index(cls_all, sup_all, sensory.numpy())[sensory.numpy()]
+            extra['port_channels'] = modal_channels_(interfaces.input, modality, interfaces.config.dim, interfaces.config.fan_in, interfaces.config.seed)
+        if port_encoder == 'type':
+            types = node_column(data['body_ids'], 'type')[sensory.numpy()]
+            types = np.where(types == '', 'untyped', types)
+            names_t, group = np.unique(types, return_inverse=True)
+            interfaces.input = TypeSharedInjector(interfaces.input, torch.from_numpy(group.astype(np.int64)), interfaces.config.seed)
+            extra['port_encoder'] = dict(kind='type', groups=int(len(names_t)), untyped_ports=int((types == 'untyped').sum()), weights=int(interfaces.input.weight.numel()))
     if freeze_core:
         # reservoir / identity controls (phase 8): the synaptic weights become a buffer, never trained
         raw = core._parameters.pop('raw')
@@ -228,7 +253,10 @@ def main():
     from fly_core_variants import VARIANTS
     p.add_argument('--rewire-kind', choices=sorted(KINDS) + ['none'], default='degree',
                    help='graph null model (see fly_rewire.KINDS); none = original graph, for ports/readout/core variants')
-    p.add_argument('--ports', choices=['anatomical', 'random_matched', 'olfactory', 'visual', 'auditory', 'shortpath'], default='anatomical')
+    p.add_argument('--ports', choices=['anatomical', 'random_matched', 'olfactory', 'visual', 'auditory', 'shortpath', 'convergent'], default='anatomical')
+    p.add_argument('--port-channels', choices=['mixed', 'modal'], default='mixed', help='modal = every anatomical port reads only the embedding channel block of its sensory modality (phase 8, P1)')
+    p.add_argument('--port-encoder', choices=['node', 'type'], default='node', help='type = ports of the same sensory cell type share channels, weight and bias (phase 8, P2)')
+    p.add_argument('--gain-groups', choices=['superclass', 'modality'], default='superclass', help='grouping of the gain_group core flag (phase 8, P3: one gain per sensory modality)')
     p.add_argument('--pre-steps', type=int, default=4, help='core substeps per token before the attention read (main model: 4)')
     p.add_argument('--post-steps', type=int, default=4, help='core substeps per token after the attention read (main model: 4)')
     p.add_argument('--readout', choices=['chunks', 'anatomical', 'fru', 'hub', 'cx'], default='chunks')
@@ -288,7 +316,7 @@ def main():
             model, data, stats = build_control_cns(threshold, a.rewire_seed, a.rewire_kind, a.ports, a.readout, a.core_variant, a.fast_mode, a.chunk, a.index_dtype,
                                                    a.pre_steps, a.post_steps, a.weight_scale, loop=loop, freeze_core=a.freeze_core,
                                                    ports_seed=a.ports_seed, ports_count=a.ports_count,
-                                                   init_norm=a.init_norm,
+                                                   init_norm=a.init_norm, port_channels=a.port_channels, port_encoder=a.port_encoder, gain_groups=a.gain_groups,
                                                    homeo=tuple(float(x) for x in a.homeo.split(',')) if a.homeo else None,
                                                    arousal=(lambda f: (f[0], float(f[1]), float(f[2]), float(f[3])))(a.arousal.split(',')) if a.arousal else None)
             holder['data'] = data; holder['stats'] = stats; holder['model'] = model
@@ -393,7 +421,8 @@ def main():
                                    optimizer=a.optimizer, muon_lr=a.muon_lr if a.optimizer == 'muon' else None,
                                    attn_reads=a.attn_reads, attn_kv=a.attn_kv, attn_step_id=a.attn_step_id, attn_inject=a.attn_inject,
                                    token_injection=a.token_injection, freeze_core=a.freeze_core, core_lr=a.core_lr, depth_schedule=a.depth_schedule, homeo=a.homeo, arousal=a.arousal,
-                                   init_norm=a.init_norm, output_scale=a.output_scale, interface_lr=a.interface_lr, init_from=a.init_from, freeze_interfaces=a.freeze_interfaces, ports_seed=a.ports_seed, ports_count=a.ports_count,
+                                   init_norm=a.init_norm, output_scale=a.output_scale, interface_lr=a.interface_lr, init_from=a.init_from, freeze_interfaces=a.freeze_interfaces,
+                                   port_channels=a.port_channels, port_encoder=a.port_encoder, gain_groups=a.gain_groups, ports_seed=a.ports_seed, ports_count=a.ports_count,
                                    stats=holder['stats'],
                                    sources={f: hashlib.sha256((ROOT / f).read_bytes()).hexdigest() for f in CONTROL_SOURCES}),
                       semantic_verdict=f'control run: graph={a.rewire_kind}, ports={a.ports}, readout={a.readout}, core={a.core_variant}; same nodes and init; 2000-update test, not a model change')

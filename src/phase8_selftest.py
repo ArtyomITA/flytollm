@@ -192,8 +192,34 @@ def check_output_scale_and_freeze():
     print('8b. freeze interfaces: only core.raw trainable, gradient finite: ok')
 
 
+def check_port_variants():
+    from fly_interfaces_variants import modal_channels_, TypeSharedInjector
+    ids = tokens(); targets = tokens(seed=2)
+    model = build(FlyLM)
+    ports = model.interfaces.input.nodes.numel()
+    modality = torch.arange(ports) % 4 + 1        # 4 fake modalities, ids 1..4
+    info = modal_channels_(model.interfaces.input, modality, 256, 8, 17)
+    ch = model.interfaces.input.channels
+    block = 256 // 4
+    for g in range(1, 5):
+        sel = ch[modality == g]
+        lo = (g - 1) * block; hi = 256 if g == 4 else lo + block
+        assert int(sel.min()) >= lo and int(sel.max()) < hi, (g, int(sel.min()), int(sel.max()))
+    logits, _ = model(ids); loss, _ = model.loss(logits, targets, ids); loss.backward()
+    print(f'9. modal channels: every port reads only its modality block ({len(info)} blocks), training ok')
+    model = build(FlyLM)
+    group = torch.arange(ports) % 7
+    model.interfaces.input = TypeSharedInjector(model.interfaces.input, group, 17)
+    out = model.interfaces.input(torch.randn(2, 256))
+    assert out.shape == (2, model.core.n) and torch.isfinite(out).all()
+    logits, _ = model(ids); loss, _ = model.loss(logits, targets, ids); loss.backward()
+    assert model.interfaces.input.weight.grad is not None and model.interfaces.input.weight.shape == (7, 8)
+    print('9b. type-shared injector: 7 shared channels of fan-in 8, forward finite, gradient on the shared weights: ok')
+
+
 if __name__ == '__main__':
     torch.manual_seed(0)
+    check_port_variants()
     check_output_scale_and_freeze()
     check_separate_head()
     check_homeo_arousal()

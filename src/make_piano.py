@@ -17,7 +17,10 @@ RESULT = {
     'L7': 'FATTO: 4,132 (+0,020 su K5: dentro il rumore). Non candidata.',
     'N0': 'FATTO: nel blocco pre rileggere dà lo stesso richiamo (coseno ≥ 0,965); dopo il feedback lo stato si allontana: al sottopasso 8 una rilettura guarderebbe altrove nel 39% dei token. Dinamica = ciclo di periodo 2.',
     'N6c': 'FATTO: fra 8 e 12 il cambio costa +0,04 / +0,07; tutto ciò che tocca 4+4 costa 0,12-0,50; shock 4 → 12 = +0,34.',
-    'C15': 'FALLITO per un bug dello script (corretto): da rifare nella coda 8c.',
+    'C15': "FATTO: sinapsi rimesse all'init su K8: 3,5407 → 3,5401 (0,0006). Il nucleo è un reservoir fisso; l'apprendimento sta nelle interfacce.",
+    'C14': 'FATTO: passo sinaptico 1e-3 / 1e-2 a 4+4: 4,275 / 4,276 (= 4,275); a 8+8 1e-2: 4,202 vs L4 4,187 (rumore). Pesi mossi 1,4% / 14,6%: si muovono, la CE non cambia.',
+    'C13': 'FATTO: caricatore universale delle varianti (phase8_load_variant.py): K5 ricostruito, CE DEV 4,1529 = 4,152. Suite di inferenza su ogni variante.',
+    'C16': 'IN CORSO: gradiente allargato da solo a 8+8: 4,183 vs L4 4,187 (rumore) con archi mossi 10,5% vs 2,5%; con passo 1e-3: 4,185, pesi mossi 3,2% (×18), archi 20,6%; con 1e-2 in coda.',
 }
 # ---- terse technical notes (caveman ultra, for the assistant)
 NOTES = {
@@ -36,7 +39,10 @@ NOTES = {
     'K8': 'gap vs base: 2000 +0,288 · 4000 +0,155 · 6000 +0,114 · 8000 +0,112 (si stabilizza). vs 3e-4: +0,149→+0,031. grad med 5,9 max 25,8. replica K1 4,274. < Transformer 3,563 (Adam, non pari ottimizzatore).',
     'N0': 'cos rep vs real s1-8: .869 .934 .977 1 .978 .929 .854 .760. recall cos: .965 .980 .992 1 .993 .967 .902 .799. argmax agree: .851 .886 .936 1 .925 .849 .740 .614. JS max .096. entropia 1,10→1,25. spike Jaccard lag1 .308 lag2 .656 lag3 .354 lag4 .537. CE nel JSON (7,36) invalida: logit con embedding tied invece di model.head; fix fatto, rerun in 8c.',
     'N6c': 'matrice train×eval (4/8/12): 4: 4,276 4,396 4,620 · 8: 4,442 4,185 4,223 · 12: 4,666 4,235 4,162. diagonale = eval di fine run. no test-time scaling (8→12 peggiora 0,038).',
-    'C15': 'UnboundLocalError: `record +=` in closure → record.add_(). rerun: phase8_c15_revert_weights.py --kind relthr su K8.',
+    'C15': 'K8 4+4 8k: trained 3,5407 · all-init 3,5401 · moved-init 3,5395 · unmoved-init 3,5494 (Δ 0,009: i pesi NON mossi contano più dei mossi = rumore di init). ol_intrinsic 89k neuroni 17,6% attivi, 0,24% archi mossi. bug closure fixato (record.add_).',
+    'C14': '4+4: 1e-3 4,275 · 1e-2 4,276 (dw 1,4% / 14,6%). T8 1e-2: 4,202 vs 4,187 (+0,015 rumore). movimento ∝ lr, CE piatta: loss piatta lungo direzioni sinaptiche.',
+    'C13': 'VariantSuite = Suite con base.load_payload patchato; build_control_cns fast_mode off + control da worker.json; src32/dst32 droppati; strict load. 0,9 min.',
+    'C16': 'T8 soft_gw: 4,183 vs 4,187. dw 0,38% vs 0,18% (×2,2), moved 10,5% vs 2,5% (×4), grad 6,4/6,3, spike 0,0542 uguale. 708 ms vs 680 (+4%). copertura ≠ collo di bottiglia (3ª conferma: M0, C14, C16).',
 }
 
 

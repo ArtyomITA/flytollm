@@ -151,6 +151,13 @@ RUNS = {
     'phase8_E3_slow_iface100_T8_2000': ('### P3 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
     'phase8_E2_outscale01_T8_2000': ('### P4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
     'phase8_E2_outscale001_T8_2000': ('### P4 ', 4.187, 'default candidato + 8+8 (L4) 4,187'),
+    # phase 8e (SUITE section Q): input channels by modality; P1-P3 are re-referenced to P0 once it exists
+    'phase8_P0_anatomical_T8_2000': ('### Q0 ', 4.187, 'porte random + 8+8 (L4) 4,187'),
+    'phase8_P1_modal_channels_T8_2000': ('### Q1 ', 4.187, 'porte random + 8+8 (L4) 4,187; riferimento vero = P0 quando esiste'),
+    'phase8_P2_type_encoder_T8_2000': ('### Q2 ', 4.187, 'porte random + 8+8 (L4) 4,187; riferimento vero = P0 quando esiste'),
+    'phase8_P3_modal_gain_T8_2000': ('### Q3 ', 4.187, 'porte random + 8+8 (L4) 4,187; riferimento vero = P0 quando esiste'),
+    'phase8_P4_convergent_T8_2000': ('### Q4 ', 4.187, 'porte random 17.937 + 8+8 (L4) 4,187; controllo a pari numero = P4b'),
+    'phase8_P4b_random8129_T8_2000': ('### Q4 ', 4.187, 'porte random 17.937 + 8+8 (L4) 4,187'),
     'phase8_N1_reads2_2000': ('### N1 ', 4.275, 'default candidato 2000 4,275'),
     'phase8_N2_every_2000': ('### N2 ', 4.275, 'default candidato 2000 4,275'),
     'phase8_N3_every_firstkv_2000': ('### N3 ', 4.275, 'default candidato 2000 4,275'),
@@ -207,6 +214,13 @@ def main():
             if d.get('ok') and d.get('result', {}).get('curve'):
                 ce = d['result']['curve'][-1]['dev']['ce']
                 RUNS[target] = ('### C17 ', ce, f'{label} {fmt(ce)}')
+    p0 = ROOT / 'results/phase8_P0_anatomical_T8_2000.json'
+    if p0.exists():
+        d = json.loads(p0.read_text())
+        if d.get('ok') and d.get('result', {}).get('curve'):
+            ce = d['result']['curve'][-1]['dev']['ce']
+            for name, marker in (('phase8_P1_modal_channels_T8_2000', '### Q1 '), ('phase8_P2_type_encoder_T8_2000', '### Q2 '), ('phase8_P3_modal_gain_T8_2000', '### Q3 ')):
+                RUNS[name] = (marker, ce, f'porte anatomiche + 8+8 (P0) {fmt(ce)}')
     micro = ROOT / 'results/phase8_micro_default_300.json'
     if micro.exists():
         d = json.loads(micro.read_text())
